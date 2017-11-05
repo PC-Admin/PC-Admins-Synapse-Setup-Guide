@@ -25,20 +25,21 @@ Prepare Server
 `$ sudo apt install -y apt-transport-https lsof curl python python-pip`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
-`	deb https://matrix.org/packages/debian/ stretch main`
-`	deb-src https://matrix.org/packages/debian/ stretch main`
-
+```
+	deb https://matrix.org/packages/debian/ stretch main
+	deb-src https://matrix.org/packages/debian/ stretch main
+```
 `$ sudo nano /etc/apt/sources.list.d/matrix.list`
 ***
 
 Installing Matrix
 -----------------
 
-$ wget https://matrix.org/packages/debian/repo-key.asc sudo apt-key add -
+`$ wget https://matrix.org/packages/debian/repo-key.asc | sudo apt-key add -`
 
-$ sudo apt update && sudo apt upgrade && sudo apt autoremove
+`$ sudo apt update && sudo apt upgrade && sudo apt autoremove`
 
-$ sudo apt install matrix-synapse -y
+`$ sudo apt install matrix-synapse -y`
 
 Asked to set name of server: ‘yourserver.org’
 ***
@@ -47,23 +48,24 @@ Configure Firewall
 ------------------
 
 Open the following ports:
-
+```
 $ sudo ufw allow 443
 $ sudo ufw allow 8448
 $ sudo ufw allow 80
-
+```
 If you have an external firewall, open these ports there.
 ***
 
 Certbot Setup
 -------------
 
-$ sudo apt install certbot
+`$ sudo apt install certbot`
 
 Test if server IP can be pinged first, if it can then run:
 
-$ sudo certbot certonly
+`$ sudo certbot certonly`
 
+```
 choose ‘spin up a temporary webserver’
 enter a recovery email
 enter ‘yourserver.org’ as the domain
@@ -75,17 +77,18 @@ IMPORTANT NOTES:
  - Congratulations! Your certificate and chain have been saved at
    /etc/letsencrypt/live/yourserver.org/fullchain.pem. Your cert will
    expire on 2017-11-01. 
+```
 
 for 3 month renewal, set a crontab:
 
-$ sudo crontab -e
+`$ sudo crontab -e`
 
 Insert Line:
 @monthly certbot renew --quiet --post-hook "systemctl reload nginx"
 
 ^ This doesn’t work. If anyone has the solution for renewal please contact me.
 
-$ sudo ls /etc/letsencrypt/live/yourserver.org
+`$ sudo ls /etc/letsencrypt/live/yourserver.org`
 cert.pem  chain.pem  fullchain.pem  privkey.pem  README
 ***
 
@@ -93,12 +96,14 @@ Configure NGINX with A+ SSL
 ---------------------------
 
 Generate dhparam key and move it to your letsencrypt folder:
-$ openssl dhparam -out dhparam2048.pem 2048
-$ sudo cp ./dhparam2048.pem /etc/letsencrypt/live/yourserver.org
 
-$ sudo apt install nginx -y
+`$ openssl dhparam -out dhparam2048.pem 2048`
 
-$ sudo nano /etc/nginx/conf.d/matrix.conf
+`$ sudo cp ./dhparam2048.pem /etc/letsencrypt/live/yourserver.org`
+
+`$ sudo apt install nginx -y`
+
+`$ sudo nano /etc/nginx/conf.d/matrix.conf`
 
 Add:
 
@@ -131,11 +136,11 @@ server {
 Make sure to replace the server name here!
 
 Restart service and renew SSL:
-$ sudo service nginx stop
+`$ sudo service nginx stop`
 
-$ sudo certbot renew
+`$ sudo certbot renew`
 
-$ sudo service nginx start
+`$ sudo service nginx start`
 ***
 
 Fine Tune Synapse
@@ -177,7 +182,7 @@ SYNAPSE_CACHE_FACTOR=0.05
 ```
 Then restart synapse and examine the RAM usage:
 
-$ sudo service matrix-synapse restart
+`$ sudo service matrix-synapse restart`
 ***
 
 Load Riot-Web client into NGINX
@@ -188,14 +193,16 @@ NGINX content location:
 
 https://github.com/vector-im/riot-web/releases/latest
 
+```
 ~/riot-web$ wget https://github.com/vector-im/riot-web/releases/download/v0.11.4/riot-v0.11.4.tar.gz
 $ tar -zxvf ./riot-v0.11.4.tar.gz
 $ sudo rm -r /usr/share/nginx/html/*
 $ sudo mv ./riot-v0.11.4/* /usr/share/nginx/html/
+```
 
 Nope… reset nginx?
 
-$ sudo systemctl restart nginx
+`$ sudo systemctl restart nginx`
 
 You should be able to view and use Riot-web through your URL now, test it out.
 ***
@@ -207,14 +214,14 @@ Your matrix server still cannot make calls across NATs, for this we need to conf
 
 Configure a simple A DNS record pointing turn.yourserver.org to your servers IP.
 
-$ sudo apt install coturn
+`$ sudo apt install coturn`
 
 Generate a ‘shared-secret-key’, this can be done like so:
-```
-$ < /dev/urandom tr -dc _A-Z-a-z-0-9 head -c64
-V2OuWAio2B8sBpIt6vJk8Hmv1FRapQJDmNhhDEqjZf0mCyyIlOpf3PtWNT6WfWSh
-```
-$ sudo nano /etc/turnserver.conf
+
+`$ < /dev/urandom tr -dc _A-Z-a-z-0-9 head -c64`
+`V2OuWAio2B8sBpIt6vJk8Hmv1FRapQJDmNhhDEqjZf0mCyyIlOpf3PtWNT6WfWSh`
+
+`$ sudo nano /etc/turnserver.conf`
 Edited so that:
 ```
 lt-cred-mech
@@ -228,7 +235,8 @@ total-quota=1200
 min-port=49152
 max-port=65535
 ```
-$ sudo nano /etc/default/coturn
+
+`$ sudo nano /etc/default/coturn`
 ```
 #
 # Uncomment it if you want to have the turnserver running as
@@ -236,9 +244,10 @@ $ sudo nano /etc/default/coturn
 #
 TURNSERVER_ENABLED=1
 ```
-$ sudo ufw allow 3478
+`$ sudo ufw allow 3478`
 
-$ sudo nano /etc/matrix-synapse/homeserver.yaml
+`$ sudo nano /etc/matrix-synapse/homeserver.yaml`
+
 ```
 turn_uris: [ "turn:turn.yourserver.org:3478?transport=udp", "turn:turn.yourserver.org:3478?transport=tcp" ]
 turn_shared_secret: shared-secret-key
@@ -246,9 +255,9 @@ turn_user_lifetime: 86400000
 turn_allow_guests: True
 ```
 
-$ sudo systemctl start coturn
+`$ sudo systemctl start coturn`
 
-$ sudo systemctl restart matrix-synapse
+`$ sudo systemctl restart matrix-synapse`
 ***
 
 Configure PostgreSQL database
@@ -258,13 +267,13 @@ By default synapse uses a sqlite3 database, performance and scalability is great
 
 Install PostgreSQL
 
-$ sudo apt install postgresql libpq-dev postgresql-client postgresql-client-common
+`$ sudo apt install postgresql libpq-dev postgresql-client postgresql-client-common`
 
 Create Role and Database
 
-$ sudo -i -u postgres
+`$ sudo -i -u postgres`
 
-$ createuser synapse -P --interactive
+`$ createuser synapse -P --interactive`
 ```
 postgres@VM:~$ createuser synapse -P --interactive
 Enter password for new role: 
@@ -291,11 +300,11 @@ host all all 127.0.0.1/32 trust
 ```
 Restart postgresql after the change:
 
-$ sudo service postgresql restart
+`$ sudo service postgresql restart`
 
 Shutdown matrix-synapse for now:
 
-$ sudo service matrix-synapse stop 
+`$ sudo service matrix-synapse stop` 
 
 Let's give the user ‘matrix-synapse’ access to bash temporary so we login to it's shell. The port process felt easier when I can actually work with the synapse user (python/envs/permissions work nicely) We will undo this change later:
 ```
@@ -310,7 +319,7 @@ $ sudo -i -u matrix-synapse
 You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here.
 ```
 Install psycopg2:
-$ pip install psycopg2
+`$ pip install psycopg2`
 !NOTE Ignore any traceback errors if you get and no use to try sudo as this is not an admin user
 
 
@@ -319,18 +328,18 @@ You should land immediately to matrix-synapse's home directory which is /var/lib
 $ cp homeserver.db homeserver.db.snapshot
 !NOTE, no need to use sudo anytime when you are logged in as matrix-synapse. This user is not an admin(in sudoers file) and it already has correct permissions for the needed files/db's/directories's. 
 ```
-$ ls
+`$ ls`
 homeserver.db  media  uploads
 
 Restart service for now:
 
-$ exit
+`$ exit`
 
-$ sudo service matrix-synapse start
+`$ sudo service matrix-synapse start`
 
 Login back to matrix-synapse account:
 
-$ sudo -i -u matrix-synapse
+`$ sudo -i -u matrix-synapse`
 
 Make a copy of the homeserver.yaml configuration file to be modified for our postgresql database settings:
 ```
@@ -356,7 +365,7 @@ https://github.com/matrix-org/synapse/blob/master/scripts/synapse_port_db
 
 Set excecute permissions to the synapse_port_db.py -script:
 
-$ chmod +x synapse_port_db.py
+`$ chmod +x synapse_port_db.py`
 
 Now we are ready to try the port script against the homeserver.db.snapshot:
 ```
