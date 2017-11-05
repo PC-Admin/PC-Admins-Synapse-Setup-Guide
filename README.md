@@ -1,7 +1,6 @@
 
-**PC-Admin's Synapse Setup Guide**
-
-.. contents::
+PC-Admin's Synapse Setup Guide
+==============================
 
 This guide covers Synapse setup for Debian 9. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
@@ -9,19 +8,19 @@ You will need at least a 1GB VPS although I recommend 2GB. You will also need a 
 
 
 Server Setup
-============
+------------
 
 Configure a Debian 9 server with auto-updates, security and SSH access.
 
 
 DNS Records
-===========
+-----------
 
 Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP.
 
 
 Prepare Server
-==============
+--------------
 
 $ sudo apt install -y apt-transport-https lsof curl python python-pip
 
@@ -33,7 +32,7 @@ $ sudo nano /etc/apt/sources.list.d/matrix.list
 
 
 Installing Matrix
-=================
+-----------------
 
 $ wget https://matrix.org/packages/debian/repo-key.asc sudo apt-key add -
 
@@ -45,7 +44,7 @@ Asked to set name of server: ‘yourserver.org’
 
 
 Configure Firewall
-==================
+------------------
 
 Open the following ports:
 
@@ -57,7 +56,7 @@ If you have an external firewall, open these ports there.
 
 
 Certbot Setup
-=============
+-------------
 
 $ sudo apt install certbot
 
@@ -91,7 +90,7 @@ cert.pem  chain.pem  fullchain.pem  privkey.pem  README
 
 
 Configure NGINX with A+ SSL
-===========================
+---------------------------
 
 Generate dhparam key and move it to your letsencrypt folder:
 $ openssl dhparam -out dhparam2048.pem 2048
@@ -140,10 +139,9 @@ $ sudo service nginx start
 
 
 Fine Tune Synapse
-=================
+-----------------
 
 Edit /etc/matrix-synapse/homeserver.yaml:
-
 ```
 # A list of other Home Servers to fetch the public room directory from
 # and include in the public room directory of this home server
@@ -154,7 +152,6 @@ secondary_directory_servers:
     - matrix.org
     - vector.im
 ```
-
 If you want you can also:
 
 Enable Self Registration
@@ -163,28 +160,28 @@ $ sudo nano /etc/matrix-synapse/homeserver.yaml
 enable_registration: True
 
 Allow Guests
-
+```
 # Allows users to register as guests without a password/email/etc, and
 # participate in rooms hosted on this server which have been made
 # accessible to anonymous users.
 allow_guest_access: True
-
+```
 There are other settings here you may want to adjust. I would do so one at a time with testing.
 
 Also check environmental variables in /etc/default/matrix-synapse for a small server (<=2GB), you will want to edit in a low cache factor:
-
+```
 # Specify environment variables used when running Synapse
 # SYNAPSE_CACHE_FACTOR=1 (default)
 
 SYNAPSE_CACHE_FACTOR=0.05
-
+```
 Then restart synapse and examine the RAM usage:
 
 $ sudo service matrix-synapse restart
 
 
 Load Riot-Web client into NGINX
-===============================
+-------------------------------
 
 NGINX content location:
 /usr/share/nginx/html/index.html
@@ -204,7 +201,7 @@ You should be able to view and use Riot-web through your URL now, test it out.
 
 
 Configure TURN service:
-=======================
+-----------------------
 
 Your matrix server still cannot make calls across NATs, for this we need to configure coturn.
 
@@ -212,7 +209,7 @@ Configure a simple A DNS record pointing turn.yourserver.org to your servers IP.
 
 $ sudo apt install coturn
 
-Generate a ‘shared-secret-key’, this can be done like so:
+Generate a ‘shared-secret-key’, this can be done like so: 
 $ < /dev/urandom tr -dc _A-Z-a-z-0-9 head -c64
 V2OuWAio2B8sBpIt6vJk8Hmv1FRapQJDmNhhDEqjZf0mCyyIlOpf3PtWNT6WfWSh
 
