@@ -394,7 +394,7 @@ Modify the postgres database settings to the new homeserver-postgres.yaml -file:
 
 `$ nano /etc/matrix-synapse/homeserver-postgres.yaml`
 
-Fill in the database section as follows:
+Fill in the database section as follows, commenting out the old section:
 ```
 database:
     name: psycopg2
