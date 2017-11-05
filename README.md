@@ -22,13 +22,13 @@ Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP.
 Prepare Server
 --------------
 
-$ sudo apt install -y apt-transport-https lsof curl python python-pip
+`$ sudo apt install -y apt-transport-https lsof curl python python-pip`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
-	deb https://matrix.org/packages/debian/ stretch main
-	deb-src https://matrix.org/packages/debian/ stretch main
+`	deb https://matrix.org/packages/debian/ stretch main`
+`	deb-src https://matrix.org/packages/debian/ stretch main`
 
-$ sudo nano /etc/apt/sources.list.d/matrix.list
+`$ sudo nano /etc/apt/sources.list.d/matrix.list`
 ***
 
 Installing Matrix
