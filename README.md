@@ -209,13 +209,13 @@ Configure a simple A DNS record pointing turn.yourserver.org to your servers IP.
 
 $ sudo apt install coturn
 
-Generate a ‘shared-secret-key’, this can be done like so:\n
-$ < /dev/urandom tr -dc _A-Z-a-z-0-9 head -c64
+Generate a ‘shared-secret-key’, this can be done like so:
+```$ < /dev/urandom tr -dc _A-Z-a-z-0-9 head -c64
 V2OuWAio2B8sBpIt6vJk8Hmv1FRapQJDmNhhDEqjZf0mCyyIlOpf3PtWNT6WfWSh
-
+```
 $ sudo nano /etc/turnserver.conf
 Edited so that:
-lt-cred-mech
+```lt-cred-mech
 use-auth-secret
 static-auth-secret=[shared-secret-key]
 realm=turn.yourserver.org
@@ -224,22 +224,22 @@ allowed-peer-ip=10.0.0.1
 user-quota=16
 total-quota=1200
 min-port=49152
-max-port=65535
+max-port=65535```
 
 $ sudo nano /etc/default/coturn
-#
+```#
 # Uncomment it if you want to have the turnserver running as
 # an automatic system service daemon
 #
 TURNSERVER_ENABLED=1
-
+```
 $ sudo ufw allow 3478
 
 $ sudo nano /etc/matrix-synapse/homeserver.yaml
-turn_uris: [ "turn:turn.yourserver.org:3478?transport=udp", "turn:turn.yourserver.org:3478?transport=tcp" ]
+```turn_uris: [ "turn:turn.yourserver.org:3478?transport=udp", "turn:turn.yourserver.org:3478?transport=tcp" ]
 turn_shared_secret: shared-secret-key
 turn_user_lifetime: 86400000
-turn_allow_guests: True
+turn_allow_guests: True```
 
 $ sudo systemctl start coturn
 
