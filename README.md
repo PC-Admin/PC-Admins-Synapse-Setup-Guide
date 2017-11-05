@@ -367,13 +367,16 @@ This should run a long time if you've used SQLite DB for a while. The --curses a
 Almost at the finale. To complete the conversion shut down the synapse server and run the port script one last time, e.g. if the SQLite database is at homeserver.db:
 
 Move back to your normal user account (eg. exit from matrix-synapse):
+
 `$ exit`
 `$ sudo service matrix-synapse stop`
 
 Change user back to matrix-synapse:
+
 `$ sudo -i -u matrix-synapse`
 
 And let's run the portscript again to bring the latest changes to postgresql:
+
 `python synapse_port_db.py --sqlite-database homeserver.db --postgres-config /etc/matrix-synapse/homeserver-postgres.yaml --curses -v`
 
 This shouldn't take so long as it quickly figures to import incrementally (e.g) only the data that has changed during Synapse was up.
