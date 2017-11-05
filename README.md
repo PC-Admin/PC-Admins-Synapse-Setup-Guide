@@ -25,9 +25,10 @@ Prepare Server
 `$ sudo apt install -y apt-transport-https lsof curl python python-pip`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
-`deb https://matrix.org/packages/debian/ stretch main`
-`deb-src https://matrix.org/packages/debian/ stretch main`
-
+```
+deb https://matrix.org/packages/debian/ stretch main
+deb-src https://matrix.org/packages/debian/ stretch main
+```
 `$ sudo nano /etc/apt/sources.list.d/matrix.list`
 ***
 
@@ -49,10 +50,11 @@ Configure Firewall
 ------------------
 
 Open the following ports:
-`$ sudo ufw allow 443`
-`$ sudo ufw allow 8448`
-`$ sudo ufw allow 80`
-
+```
+$ sudo ufw allow 443
+$ sudo ufw allow 8448
+$ sudo ufw allow 80
+```
 If you have an external firewall, open these ports there.
 ***
 
@@ -62,6 +64,7 @@ Certbot Setup
 `$ sudo apt install certbot`
 
 Test if server IP can be pinged first, if it can then run:
+
 `$ sudo certbot certonly`
 
 Choose ‘spin up a temporary webserver’
@@ -81,12 +84,14 @@ IMPORTANT NOTES:
 ```
 
 for 3 month renewal, set a crontab:
+
 `$ sudo crontab -e`
 
 Insert Line:
+
 `@monthly certbot renew --quiet --post-hook "systemctl reload nginx"`
 
-^ This doesn’t work. If anyone has the solution for renewal please contact me.
+^ This doesn’t work. If anyone has the solution for auto-renewal please contact me.
 ```
 $ sudo ls /etc/letsencrypt/live/yourserver.org
 cert.pem  chain.pem  fullchain.pem  privkey.pem  README
@@ -97,15 +102,15 @@ Configure NGINX with A+ SSL
 ---------------------------
 
 Generate dhparam key and move it to your letsencrypt folder:
-`$ openssl dhparam -out dhparam2048.pem 2048`
-
-`$ sudo cp ./dhparam2048.pem /etc/letsencrypt/live/yourserver.org`
-
+```
+$ openssl dhparam -out dhparam2048.pem 2048
+$ sudo cp ./dhparam2048.pem /etc/letsencrypt/live/yourserver.org
+```
 Install NGINX and configure:
-`$ sudo apt install nginx -y`
-
-`$ sudo nano /etc/nginx/conf.d/matrix.conf`
-
+```
+$ sudo apt install nginx -y
+$ sudo nano /etc/nginx/conf.d/matrix.conf
+```
 Add:
 
 ```
@@ -134,14 +139,14 @@ server {
 }
 ```
 
-^ Make sure to replace the server name here!
+^ Make sure to replace the server name here with yours!
 
 Restart service and renew SSL:
-`$ sudo service nginx stop`
-
-`$ sudo certbot renew`
-
-`$ sudo service nginx start`
+```
+$ sudo service nginx stop
+$ sudo certbot renew
+$ sudo service nginx start
+```
 ***
 
 Fine Tune Synapse
@@ -149,6 +154,8 @@ Fine Tune Synapse
 
 Edit /etc/matrix-synapse/homeserver.yaml:
 ```
+$ sudo nano /etc/matrix-synapse/homeserver.yaml
+
 # A list of other Home Servers to fetch the public room directory from
 # and include in the public room directory of this home server
 # This is a temporary stopgap solution to populate new server with a
@@ -158,24 +165,21 @@ secondary_directory_servers:
     - matrix.org
     - vector.im
 ```
-If you want you can also:
-
-Enable Self Registration
+If you want you can also enable self registration and guest access:
 ```
-$ sudo nano /etc/matrix-synapse/homeserver.yaml
 enable_registration: True
-```
-Allow Guests
-```
+
 # Allows users to register as guests without a password/email/etc, and
 # participate in rooms hosted on this server which have been made
 # accessible to anonymous users.
 allow_guest_access: True
 ```
-There are other settings here you may want to adjust. I would do so one at a time with testing.
+**There are other settings here you may want to adjust. I would do so one at a time, testing each change as you go.**
 
 Also check environmental variables in `/etc/default/matrix-synapse` for a small server (<=2GB), you will want to edit in a low cache factor:
 ```
+$ sudo nano /etc/default/matrix-synapse
+
 # Specify environment variables used when running Synapse
 # SYNAPSE_CACHE_FACTOR=1 (default)
 
@@ -201,11 +205,11 @@ $ sudo rm -r /usr/share/nginx/html/*
 $ sudo mv ./riot-v0.11.4/* /usr/share/nginx/html/
 ```
 
-Nope… reset nginx?
+Reset NGINX:
 
 `$ sudo systemctl restart nginx`
 
-You should be able to view and use Riot-web through your URL now, test it out.
+You should be able to view and use Riot-Web through your URL now, test it out.
 ***
 
 Configure TURN service:
@@ -246,6 +250,7 @@ $ sudo nano /etc/default/coturn
 #
 TURNSERVER_ENABLED=1
 ```
+Open port in firewall:
 `$ sudo ufw allow 3478`
 
 Edit homeserver.yaml:
@@ -334,7 +339,7 @@ Install psycopg2:
 
 `$ pip install psycopg2`
 
-!NOTE Ignore any traceback errors if you get and no use to try sudo as this is not an admin user
+!NOTE Ignore any traceback errors if you get and do not use sudo as this is not an admin user!
 
 You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here. This location has the original SQLite homeserver.db, which we want to snapshot(copy) now, when Synapse is turned off. Let's take a snapshot:
 
@@ -425,6 +430,7 @@ Synapse should now be running against PostgreSQL, awesome!
 Final thing is to deny shell from matrix-synapse, like it was before:
 ```
 $ sudoedit /etc/passwd
+...
 matrix-synapse:x:XXX:XXXXX::/var/lib/matrix-synapse:/bin/*false*
 ```
 
