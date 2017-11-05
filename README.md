@@ -2,9 +2,11 @@
 PC-Admin's Synapse Setup Guide
 ==============================
 
-This guide covers Synapse setup for Debian 9. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
+This guide covers complete Synapse setup for Debian 9. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
 You will need at least a 1GB VPS although I recommend 2GB. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
+
+Contact me at: perthchat@protonmail.com or at: @PC-Admin:perthchat.org if you get stuck or have an edit in mind.
 ***
 
 Server Setup
@@ -204,7 +206,32 @@ $ tar -zxvf ./riot-v0.11.4.tar.gz
 $ sudo rm -r /usr/share/nginx/html/*
 $ sudo mv ./riot-v0.11.4/* /usr/share/nginx/html/
 ```
+Create and edit config.yaml in nginx directory:
+```
+$ sudo cp /usr/share/nginx/html/config.sample.json /usr/share/nginx/html/config.json
 
+$ sudo nano /usr/share/nginx/html/config.json
+
+{
+    "default_hs_url": "https://yourserver.org",
+    "default_is_url": "https://vector.im",
+    "brand": "Riot",
+    "integrations_ui_url": "https://scalar.vector.im/",
+    "integrations_rest_url": "https://scalar.vector.im/api",
+    "bug_report_endpoint_url": "https://riot.im/bugreports/submit",
+    "enableLabs": true,
+    "roomDirectory": {
+        "servers": [
+            "matrix.org"
+        ]
+    },
+    "welcomeUserId": "@riot-bot:matrix.org",
+    "piwik": {
+        "url": "https://piwik.riot.im/",
+        "siteId": 1
+    }
+}
+```
 Reset NGINX:
 
 `$ sudo systemctl restart nginx`
