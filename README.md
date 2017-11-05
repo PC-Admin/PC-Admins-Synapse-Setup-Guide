@@ -386,16 +386,20 @@ e.g:
 `$ mv homeserver-postgres.yaml homeserver.yaml`
 
 And restart Synapse:
-`$ exit from matrix-synapse -user`
-`$ sudo service matrix-synapse start`
+```
+$ exit from matrix-synapse -user
+$ sudo service matrix-synapse start
+```
 
 Synapse should now be running against PostgreSQL, awesome!
 
 Final thing is to deny shell from matrix-synapse, like it was before:
-`$ sudoedit /etc/passwd`
-`matrix-synapse:x:XXX:XXXXX::/var/lib/matrix-synapse:/bin/*false*`
+```
+$ sudoedit /etc/passwd
+matrix-synapse:x:XXX:XXXXX::/var/lib/matrix-synapse:/bin/*false*
+```
 
-Done! :)
+**Done!**
 
 
 Cleanup these old files after testing:
