@@ -28,9 +28,8 @@ $ sudo apt install -y apt-transport-https lsof curl python python-pip
 | Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
 | 	deb https://matrix.org/packages/debian/ stretch main
 | 	deb-src https://matrix.org/packages/debian/ stretch main
-
-
-$ sudo nano /etc/apt/sources.list.d/matrix.list
+| 
+| $ sudo nano /etc/apt/sources.list.d/matrix.list
 
 
 Installing Matrix
@@ -53,8 +52,8 @@ Open the following ports:
 | $ sudo ufw allow 443
 | $ sudo ufw allow 8448
 | $ sudo ufw allow 80
-
-If you have an external firewall, open these ports there.
+| 
+| If you have an external firewall, open these ports there.
 
 
 Certbot Setup
