@@ -209,7 +209,7 @@ Configure a simple A DNS record pointing turn.yourserver.org to your servers IP.
 
 $ sudo apt install coturn
 
-Generate a ‘shared-secret-key’, this can be done like so: 
+Generate a ‘shared-secret-key’, this can be done like so:\n
 $ < /dev/urandom tr -dc _A-Z-a-z-0-9 head -c64
 V2OuWAio2B8sBpIt6vJk8Hmv1FRapQJDmNhhDEqjZf0mCyyIlOpf3PtWNT6WfWSh
 
