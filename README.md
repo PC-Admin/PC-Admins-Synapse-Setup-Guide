@@ -103,6 +103,7 @@ $ sudo nano /etc/nginx/conf.d/matrix.conf
 
 Add:
 
+```
 server {
        listen         80;
        server_name    yourserver.org;
@@ -126,6 +127,7 @@ server {
         proxy_set_header X-Forwarded-For $remote_addr;
     }
 }
+```
 
 Make sure to replace the server name here!
 
@@ -142,6 +144,7 @@ Fine Tune Synapse
 
 Edit /etc/matrix-synapse/homeserver.yaml:
 
+```
 # A list of other Home Servers to fetch the public room directory from
 # and include in the public room directory of this home server
 # This is a temporary stopgap solution to populate new server with a
@@ -150,6 +153,7 @@ Edit /etc/matrix-synapse/homeserver.yaml:
 secondary_directory_servers:
     - matrix.org
     - vector.im
+```
 
 If you want you can also:
 
