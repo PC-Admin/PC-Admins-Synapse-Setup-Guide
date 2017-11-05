@@ -377,11 +377,11 @@ Done! :)
  
 Cleanup these old files after testing: 
  
-/etc/matrix-synapse/homeserver.yaml.old  
-/var/lib/matrix-synapse/homeserver.db   
-/var/lib/matrix-synapse/homeserver.db.snapshot  
-/var/lib/matrix-synapse/port-synapse.log  
-/var/lib/matrix-synapse/synapse_port_db.py  
+| /etc/matrix-synapse/homeserver.yaml.old  
+| /var/lib/matrix-synapse/homeserver.db   
+| /var/lib/matrix-synapse/homeserver.db.snapshot  
+| /var/lib/matrix-synapse/port-synapse.log  
+| /var/lib/matrix-synapse/synapse_port_db.py  
  
  
 
