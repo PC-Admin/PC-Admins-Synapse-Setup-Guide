@@ -9,6 +9,12 @@ You will need at least a 1GB VPS although I recommend 2GB. You will also need a 
 Contact me at: perthchat@protonmail.com or at: @PC-Admin:perthchat.org if you get stuck or have an edit in mind.
 ***
 
+Licensing
+------------
+
+This work is licensed under Creative Commons Attribution Share Alike 4.0, for more information on this license see here: https://creativecommons.org/licenses/by-sa/4.0/
+***
+
 Server Setup
 ------------
 
@@ -158,14 +164,6 @@ Edit /etc/matrix-synapse/homeserver.yaml:
 ```
 $ sudo nano /etc/matrix-synapse/homeserver.yaml
 
-# A list of other Home Servers to fetch the public room directory from
-# and include in the public room directory of this home server
-# This is a temporary stopgap solution to populate new server with a
-# list of rooms until there exists a good solution of a decentralized
-# room directory.
-secondary_directory_servers:
-    - matrix.org
-    - vector.im
 ```
 If you want you can also enable self registration and guest access:
 ```
@@ -178,7 +176,7 @@ allow_guest_access: True
 ```
 **There are other settings here you may want to adjust. I would do so one at a time, testing each change as you go.**
 
-Also check environmental variables in `/etc/default/matrix-synapse` for a small server (<=2GB), you will want to edit in a low cache factor:
+Also check environmental variables in `/etc/default/matrix-synapse` for a small server (<=2GB), you will want to edit in a low cache factor (<.05):
 ```
 $ sudo nano /etc/default/matrix-synapse
 
