@@ -2,7 +2,7 @@
 PC-Admin's Synapse Setup Guide
 ==============================
 
-This guide covers complete Synapse setup for Debian 9. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
+This guide covers complete Synapse setup for Debian 9 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
 You will need at least a 1GB VPS although I recommend 2GB. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
 
@@ -24,7 +24,10 @@ Configure a Debian 9 server with auto-updates, security and SSH access.
 DNS Records
 -----------
 
-Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP.
+Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP. Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
+
+Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 yourserver.org
+
 ***
 
 Prepare Server
@@ -39,7 +42,6 @@ deb-src https://matrix.org/packages/debian/ stretch main
 ```
 `$ sudo nano /etc/apt/sources.list.d/matrix.list`
 ***
-
 Installing Matrix
 -----------------
 
@@ -53,7 +55,55 @@ Installing Matrix
 
 Asked to set name of your server, enter your desired URL here. (eg: yourserver.org)
 ***
+Installing Postgresql
+-----------------
+the default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres sjould be a mandatory step.
 
+So let's install postgresql and python driver:
+`$ sudo apt install postgresql libpq-dev postgresql-client postgresql-client-common psycopg2`
+
+Create Role and Database
+
+`$ sudo -i -u postgres`
+
+`$ createuser synapse -P --interactive`
+```
+postgres@VM:~$ createuser synapse -P --interactive
+Enter password for new role: 
+Enter it again: 
+Shall the new role be a superuser? (y/n) n
+Shall the new role be allowed to create databases? (y/n) n
+Shall the new role be allowed to create more new roles? (y/n) n
+```
+Now we're back at $postgres. Let's create a database for Synapse with correct settings and set the owner to be the user we just created:
+
+Type: `psql`
+
+..And create the database as follows:
+
+`postgres=# CREATE DATABASE synapse WITH ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0 OWNER synapse;`
+
+Exit from psql by typing `\q` 
+
+All done. Let's exit from postgres account by typing exit so land back at our own user.
+
+Next we modify postgres pg_hba.conf to allow all connections from localhost to the local database server:
+
+`$ sudo nano /etc/postgresql/9.6/main/pg_hba.conf`
+
+!NOTE "Paste it under the "Put your actual configuration here"
+
+`host all all 127.0.0.1/32 trust`
+
+Restart postgresql after the change:
+
+`$ sudo service postgresql restart`
+
+Shutdown matrix-synapse for now:
+
+`$ sudo service matrix-synapse stop` 
+
+***
 Configure Firewall
 ------------------
 
