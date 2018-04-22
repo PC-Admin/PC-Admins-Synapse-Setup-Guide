@@ -59,6 +59,9 @@ Finally check that the synapse server is shutdown
 
 `$ systemctl stop matrix-synapse`
 
+In case you want to activate URL previews you need to additionally add python-lxml
+`$ sudo apt install python-lxml -y`
+
 ***
 Installing Postgresql
 -----------------
