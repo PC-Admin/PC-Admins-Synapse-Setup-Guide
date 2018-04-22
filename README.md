@@ -129,6 +129,7 @@ database:
 ```
 
 Now synapse should be ready and we can see if it starts without errors:
+
 `$ systemctl start matrix-synapse`
 
 ***
