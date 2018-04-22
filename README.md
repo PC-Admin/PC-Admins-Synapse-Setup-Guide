@@ -33,7 +33,7 @@ Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 yourserver
 Prepare Server
 --------------
 
-`$ sudo apt install -y apt-transport-https lsof curl python python-pip`
+`$ sudo apt install -y apt-transport-https lsof curl python`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
 ```
@@ -65,7 +65,7 @@ Installing Postgresql
 the default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
 
 So let's install postgresql and python driver:
-`$ sudo apt install postgresql libpq-dev postgresql-client postgresql-client-common python-psycopg2`
+`$ sudo apt install postgresql postgresql-client python-psycopg2`
 
 Create Role and Database
 
