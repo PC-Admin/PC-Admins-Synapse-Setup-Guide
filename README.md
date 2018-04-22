@@ -94,18 +94,6 @@ Exit from psql by typing `\q`
 
 All done. Let's exit from postgres account by typing exit so land back at our own user.
 
-Next we modify postgres pg_hba.conf to allow all connections from localhost to the local database server:
-
-
-`$ sudo nano /etc/postgresql/9.6/main/pg_hba.conf`
-
-!NOTE "Paste it under the "Put your actual configuration here"
-
-`host all all 127.0.0.1/32 trust`
-
-Restart postgresql after the change:
-
-`$ sudo service postgresql restart`
 ***
 Adopt Synapse config to use Postgresql
 ------------------
