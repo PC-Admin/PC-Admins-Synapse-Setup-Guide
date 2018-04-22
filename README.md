@@ -354,31 +354,11 @@ $ sudo systemctl start coturn
 $ sudo systemctl restart matrix-synapse
 ```
 ***
-
-
-Let's give the user ‘matrix-synapse’ access to bash temporary so we login to it's shell. The port process felt easier when I can actually work with the synapse user (python/envs/permissions work nicely) We will undo this change later:
-
-`$ sudoedit /etc/passwd`
-
-!NOTE, I use "sudoedit" by habit but you could also use "sudo nano /etc/passwd" so it's up your preference.
-
-Change the shell for user matrix-synapse from /bin/false to /bin/bash, it's at the end of the row:
-
-`matrix-synapse:x:XXX:XXXXX::/var/lib/matrix-synapse:/bin/bash`
-
 Now that Synapse is shutdown and we can login to matrix-synapse user:
 
-`$ sudo -i -u matrix-synapse`
+```$ sudo -u matrix-synapse -s /bin/bash
+$ cd```
 
 You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here.
 
-Final thing is to deny shell from matrix-synapse, like it was before:
-```
-$ sudoedit /etc/passwd
-...
-matrix-synapse:x:XXX:XXXXX::/var/lib/matrix-synapse:/bin/*false*
-```
-
 **Done!**
-
-
