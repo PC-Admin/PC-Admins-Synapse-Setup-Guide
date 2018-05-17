@@ -2,7 +2,7 @@
 PC-Admin's Synapse Setup Guide
 ==============================
 
-This guide covers complete Synapse setup for Debian 9. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
+This guide covers complete Synapse setup for Debian 9 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
 You will need at least a 1GB VPS although I recommend 2GB. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
 
@@ -24,13 +24,16 @@ Configure a Debian 9 server with auto-updates, security and SSH access.
 DNS Records
 -----------
 
-Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP.
+Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP. Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
+
+Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 yourserver.org
+
 ***
 
 Prepare Server
 --------------
 
-`$ sudo apt install -y apt-transport-https lsof curl python python-pip`
+`$ sudo apt install -y apt-transport-https lsof curl python`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
 ```
@@ -39,7 +42,6 @@ deb-src https://matrix.org/packages/debian/ stretch main
 ```
 `$ sudo nano /etc/apt/sources.list.d/matrix.list`
 ***
-
 Installing Matrix
 -----------------
 
@@ -52,18 +54,84 @@ Installing Matrix
 `$ sudo apt install matrix-synapse -y`
 
 Asked to set name of your server, enter your desired URL here. (eg: yourserver.org)
+
+Finally check that the synapse server is shutdown
+
+`$ systemctl stop matrix-synapse`
+
+In case you want to activate URL previews you need to additionally add python-lxml:
+
+`$ sudo apt install python-lxml -y`
+
 ***
+Installing Postgresql
+-----------------
+the default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
 
-Configure Firewall
+So let's install postgresql and python driver:
+`$ sudo apt install postgresql postgresql-client python-psycopg2`
+
+Create Role and Database
+
+`$ sudo -i -u postgres`
+
+`$ createuser synapse -P --interactive`
+```
+postgres@VM:~$ createuser synapse -P --interactive
+Enter password for new role: 
+Enter it again: 
+Shall the new role be a superuser? (y/n) n
+Shall the new role be allowed to create databases? (y/n) n
+Shall the new role be allowed to create more new roles? (y/n) n
+```
+Remember the db user password, you'll need it later
+
+Now we're back at $postgres. Let's create a database for Synapse with correct settings and set the owner to be the user we just created:
+
+Type: `psql`
+
+..And create the database as follows:
+
+`postgres=# CREATE DATABASE synapse WITH ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0 OWNER synapse;`
+
+Exit from psql by typing `\q` 
+
+All done. Let's exit from postgres account by typing exit so land back at our own user.
+
+***
+Adopt Synapse config to use Postgresql
 ------------------
+Now as we have created the db and a user to be able to connect, we need to change the synapse config to use it:
+Open /etc/matrix-synapse/home.server.yaml
+Before the change it should look like
+```
+# Database configuration
+database:
+  # The database engine name
+  name: "sqlite3"
+  # Arguments to pass to the engine
+  args:
+    # Path to the database
+    database: "/var/lib/matrix-synapse/homeserver.db"
+```
 
-Open the following ports:
+That needs to be adopted and should look like:
 ```
-$ sudo ufw allow 443
-$ sudo ufw allow 8448
-$ sudo ufw allow 80
+database:
+    name: psycopg2
+    args:
+        user: synapse
+        password: <your db user password>
+        database: synapse
+        host: localhost
+        cp_min: 5
+        cp_max: 10
 ```
-If you have an external firewall, open these ports there.
+
+Now synapse should be ready and we can see if it starts without errors:
+
+`$ systemctl start matrix-synapse`
+
 ***
 
 Certbot Setup
@@ -275,8 +343,6 @@ $ sudo nano /etc/default/coturn
 #
 TURNSERVER_ENABLED=1
 ```
-Open port in firewall:
-`$ sudo ufw allow 3478`
 
 Edit homeserver.yaml:
 ```
@@ -293,181 +359,11 @@ $ sudo systemctl start coturn
 $ sudo systemctl restart matrix-synapse
 ```
 ***
-
-Configure PostgreSQL database
------------------------------
-
-By default synapse uses a sqlite3 database, performance and scalability is greatly improved by changing over to a PostgreSQL database. If you plan to ever have more than ~20 users I would recommend doing this.
-
-Install PostgreSQL
-
-`$ sudo apt install postgresql libpq-dev postgresql-client postgresql-client-common`
-
-Create Role and Database
-
-`$ sudo -i -u postgres`
-
-`$ createuser synapse -P --interactive`
-```
-postgres@VM:~$ createuser synapse -P --interactive
-Enter password for new role: 
-Enter it again: 
-Shall the new role be a superuser? (y/n) n
-Shall the new role be allowed to create databases? (y/n) y
-Shall the new role be allowed to create more new roles? (y/n) y
-```
-Now we're back at $postgres. Let's create a database for Synapse with correct settings and set the owner to be the user we just created:
-
-Type: `psql`
-
-..And create the database as follows:
-
-`postgres=# CREATE DATABASE synapse WITH ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0 OWNER synapse;`
-
-Exit from psql by typing `\q` 
-
-All done. Let's exit from postgres account by typing exit so land back at our own user.
-
-Next we modify postgres pg_hba.conf to allow all connections from localhost to the local database server:
-
-`$ sudo nano /etc/postgresql/9.6/main/pg_hba.conf`
-
-!NOTE "Paste it under the "Put your actual configuration here"
-
-`host all all 127.0.0.1/32 trust`
-
-Restart postgresql after the change:
-
-`$ sudo service postgresql restart`
-
-Shutdown matrix-synapse for now:
-
-`$ sudo service matrix-synapse stop` 
-
-Let's give the user ‘matrix-synapse’ access to bash temporary so we login to it's shell. The port process felt easier when I can actually work with the synapse user (python/envs/permissions work nicely) We will undo this change later:
-
-`$ sudoedit /etc/passwd`
-
-!NOTE, I use "sudoedit" by habit but you could also use "sudo nano /etc/passwd" so it's up your preference.
-
-Change the shell for user matrix-synapse from /bin/false to /bin/bash, it's at the end of the row:
-
-`matrix-synapse:x:XXX:XXXXX::/var/lib/matrix-synapse:/bin/bash`
-
 Now that Synapse is shutdown and we can login to matrix-synapse user:
 
-`$ sudo -i -u matrix-synapse`
+```$ sudo -u matrix-synapse -s /bin/bash
+$ cd```
 
 You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here.
 
-Install psycopg2:
-
-`$ pip install psycopg2`
-
-!NOTE Ignore any traceback errors if you get and do not use sudo as this is not an admin user!
-
-You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here. This location has the original SQLite homeserver.db, which we want to snapshot(copy) now, when Synapse is turned off. Let's take a snapshot:
-
-`$ cp homeserver.db homeserver.db.snapshot`
-
-!NOTE, no need to use sudo anytime when you are logged in as matrix-synapse. This user is not an admin(in sudoers file) and it already has correct permissions for the needed files/db's/directories's. 
-```
-$ ls
-homeserver.db  media  uploads
-```
-Restart service for now:
-```
-$ exit
-$ sudo service matrix-synapse start
-```
-Login back to matrix-synapse account:
-
-`$ sudo -i -u matrix-synapse`
-
-Make a copy of the homeserver.yaml configuration file to be modified for our postgresql database settings:
-
-`$ cp /etc/matrix-synapse/homeserver.yaml /etc/matrix-synapse/homeserver-postgres.yaml`
-
-Modify the postgres database settings to the new homeserver-postgres.yaml -file:
-
-`$ nano /etc/matrix-synapse/homeserver-postgres.yaml`
-
-Fill in the database section as follows, commenting out the old section:
-```
-database:
-    name: psycopg2
-    args:
-        user: synapse
-        password: YOUR_SICK_DB_PASSWORD_PLEASE_SAVE_THIS_SOMEWHERE
-        database: synapse
-        host: localhost
-        cp_min: 5
-        cp_max: 10
-```
-!NOTE user,password,database are the values we created with psql before.
-
-Download synapse_port_db.py:
-
-https://github.com/matrix-org/synapse/blob/master/scripts/synapse_port_db
-
-Set excecute permissions to the synapse_port_db.py -script:
-
-`$ chmod +x synapse_port_db.py`
-
-Now we are ready to try the port script against the homeserver.db.snapshot:
-
-`$ python synapse_port_db.py --sqlite-database homeserver.db.snapshot --postgres-config /etc/matrix-synapse/homeserver-postgres.yaml --curses -v`
-
-This should run a long time if you've used SQLite DB for a while. The --curses and -v flags at the end help you visualize what's going on. It will show you in real time what data is migrated from the homeserver.db.snapshot to your new postgresql database. At the end the screen should be pretty much all green (I think I had like 2 "events" missing). Press any key..
-
-Almost at the finale. To complete the conversion shut down the synapse server and run the port script one last time, e.g. if the SQLite database is at homeserver.db:
-
-Move back to your normal user account (eg. exit from matrix-synapse):
-```
-$ exit
-$ sudo service matrix-synapse stop
-```
-Change user back to matrix-synapse:
-
-`$ sudo -i -u matrix-synapse`
-
-And let's run the portscript again to bring the latest changes to postgresql:
-
-`$ python synapse_port_db.py --sqlite-database homeserver.db --postgres-config /etc/matrix-synapse/homeserver-postgres.yaml --curses -v`
-
-This shouldn't take so long as it quickly figures to import incrementally (e.g) only the data that has changed during Synapse was up.
-
-
-Last step is to rename our new homeserver-postgresql.yaml to homeserver.yaml
-e.g:
-```
-$ cd /etc/matrix-synapse/
-$ mv homeserver.yaml homeserver.yaml.old
-$ mv homeserver-postgres.yaml homeserver.yaml
-```
-And restart Synapse:
-```
-$ exit (from matrix-synapse user)
-$ sudo service matrix-synapse start
-```
-Synapse should now be running against PostgreSQL, awesome!
-
-Final thing is to deny shell from matrix-synapse, like it was before:
-```
-$ sudoedit /etc/passwd
-...
-matrix-synapse:x:XXX:XXXXX::/var/lib/matrix-synapse:/bin/*false*
-```
-
 **Done!**
-
-
-Cleanup these old files after testing:
-```/etc/matrix-synapse/homeserver.yaml.old 
-/var/lib/matrix-synapse/homeserver.db
-/var/lib/matrix-synapse/homeserver.db.snapshot 
-/var/lib/matrix-synapse/port-synapse.log 
-/var/lib/matrix-synapse/synapse_port_db.py 
-```
-
-
