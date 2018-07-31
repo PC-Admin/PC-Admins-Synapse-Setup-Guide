@@ -272,7 +272,7 @@ $ tar -zxvf ./riot-v0.11.4.tar.gz
 $ sudo rm -r /usr/share/nginx/html/*
 $ sudo mv ./riot-v0.11.4/* /usr/share/nginx/html/
 ```
-Create and edit config.yaml in nginx directory:
+Create and edit config.json in nginx directory:
 ```
 $ sudo cp /usr/share/nginx/html/config.sample.json /usr/share/nginx/html/config.json
 
