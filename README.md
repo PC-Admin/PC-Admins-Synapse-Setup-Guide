@@ -158,6 +158,7 @@ IMPORTANT NOTES:
    /etc/letsencrypt/live/yourserver.org/fullchain.pem. Your cert will
    expire on 2017-11-01. 
 ```
+***
 
 Setup SSL Auto-renewal
 ---------------------------
@@ -383,11 +384,14 @@ $ sudo systemctl restart matrix-synapse
 ***
 Now that Synapse is shutdown and we can login to matrix-synapse user:
 
-```$ sudo -u matrix-synapse -s /bin/bash
-$ cd```
+```
+$ sudo -u matrix-synapse -s /bin/bash
+$ cd
+```
 
 You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here.
 
 **Done!**
 ***
+
 Now your server is up and running consider registering on the hello-matrix list of servers: https://www.hello-matrix.net/public_servers.php or at https://matrix.to/#/#hello-matrix:matrix.org
