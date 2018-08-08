@@ -159,6 +159,9 @@ IMPORTANT NOTES:
    expire on 2017-11-01. 
 ```
 
+Setup SSL Auto-renewal
+---------------------------
+
 for 3 month renewal, set a crontab:
 
 `$ sudo crontab -e`
@@ -167,11 +170,30 @@ Insert Line:
 
 `@monthly certbot renew --quiet --post-hook "systemctl reload nginx"`
 
-^ This doesn’t work. If anyone has the solution for auto-renewal please contact me.
+^ This doesn’t work you're experiencing the Debian 9 bug i noticed where letsencrypt doesn't want to renew while nginx is on. Here is how i automated it:
+
+$ sudo /home/username/letsencrypt-record
+$ sudo chmod 644 /home/username/letsencrypt-record
+$ sudo touch /root/certbot-update.sh
+$ sudo chmod 744 
+$ sudo nano /root/certbot-update.sh
 ```
-$ sudo ls /etc/letsencrypt/live/yourserver.org
-cert.pem  chain.pem  fullchain.pem  privkey.pem  README
+#!/bin/bash
+
+service nginx stop
+certbot renew --quiet
+service nginx start
+
+now=$(date +"%m_%d_%Y")
+echo SSL updated on: $now >> /home/username/letsencrypt-record
 ```
+
+$ sudo crontab -e
+```
+# SSL Renewal
+01 00 01 Jan,Apr,Jul,Oct * /bin/sh /root/certbot-update.sh
+```
+
 ***
 
 Configure NGINX with A+ SSL
@@ -367,3 +389,5 @@ $ cd```
 You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here.
 
 **Done!**
+***
+Now your server is up and running consider registering on the hello-matrix list of servers: https://www.hello-matrix.net/public_servers.php or at https://matrix.to/#/#hello-matrix:matrix.org
