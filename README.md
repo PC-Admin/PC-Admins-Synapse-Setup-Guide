@@ -171,7 +171,7 @@ Insert Line:
 
 `@monthly certbot renew --quiet --post-hook "systemctl reload nginx"`
 
-^ This doesn’t work you're experiencing the Debian 9 bug i noticed where letsencrypt doesn't want to renew while nginx is on. Here is how i automated it:
+^ If this doesn’t work you're experiencing the Debian 9 bug i noticed where letsencrypt doesn't want to renew while nginx is on. Here is how i automated it:
 
 `$ sudo /home/username/letsencrypt-record`
 
