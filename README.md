@@ -173,11 +173,12 @@ Insert Line:
 
 ^ This doesn’t work you're experiencing the Debian 9 bug i noticed where letsencrypt doesn't want to renew while nginx is on. Here is how i automated it:
 
-$ sudo /home/username/letsencrypt-record
-$ sudo chmod 644 /home/username/letsencrypt-record
-$ sudo touch /root/certbot-update.sh
-$ sudo chmod 744 
-$ sudo nano /root/certbot-update.sh
+`$ sudo /home/username/letsencrypt-record`
+`$ sudo chmod 644 /home/username/letsencrypt-record`
+`$ sudo touch /root/certbot-update.sh`
+`$ sudo chmod 744 /root/certbot-update.sh`
+`$ sudo nano /root/certbot-update.sh`
+Then edit in:
 ```
 #!/bin/bash
 
