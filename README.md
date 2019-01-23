@@ -243,42 +243,37 @@ $ sudo service nginx start
 ***
 
 ## Fine Tune Synapse
+There're two files that manage the behaviour of synapse:
+ 
+- Server config file in /etc/matrix-synapse/homeserver.yaml
+- Env file in /etc/default/matrix-synapse
+
+The first is used to do the configuration of synapse, the second is used to setup the environement synapse is running in. Some ENV variables have an effect on the configuration.
 
 ### Registration and guest access
-Edit /etc/matrix-synapse/homeserver.yaml:
-```
-$ sudo nano /etc/matrix-synapse/homeserver.yaml
+- Registration
 
-```
-If you want you can also enable self registration and guest access:
-```
-enable_registration: True
+    File:  /etc/matrix-synapse/homeserver.yaml: **enable_registration: True**
+    
+- Guest Access
 
-# Allows users to register as guests without a password/email/etc, and
-# participate in rooms hosted on this server which have been made
-# accessible to anonymous users.
-allow_guest_access: True
-```
+    File: /etc/matrix-synapse/homeserver.yaml: **allow_guest_access: True**
+
 **There are other settings here you may want to adjust. I would do so one at a time, testing each change as you go.**
-
-Also check environmental variables in `/etc/default/matrix-synapse.
 
 ### Cache factor
 
-For a small server (<=2GB), a adoption of the cache factor might improve performance. Some time ago the advice was to reduce the cache factor to use lss RAM. Experience has shown that the effect is quite the opposite, see [Issue](https://github.com/matrix-org/synapse/pull/4276).
+For a small server (<=2GB), an adoption of the cache factor might improve performance. Some time ago the advice was to reduce the cache factor to use less RAM. Experience has shown that the effect is quite the opposite, see [Issue](https://github.com/matrix-org/synapse/pull/4276).
 
 So the new advice is to raise the cache factor instead, with a value of 2 being a good starting point:
+
+- Cache factor
+
+    File: /etc/default/matrix-synapse: SYNAPSE_CACHE_FACTOR=2.0
  
-```
-$ sudo nano /etc/default/matrix-synapse
+***
 
-
-# Specify environment variables used when running Synapse
-# SYNAPSE_CACHE_FACTOR=1 (default)
-
-SYNAPSE_CACHE_FACTOR=2.0
-```
-Then restart synapse and examine the RAM usage:
+<span style="color:red">**Don't forget to restart synapse and examine the RAM usage after each change:**</span>
 
 `$ sudo service matrix-synapse restart`
 ***
