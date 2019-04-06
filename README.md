@@ -1,6 +1,6 @@
 
-PC-Admin's Synapse Setup Guide
-==============================
+# PC-Admin's Synapse Setup Guide
+
 
 This guide covers complete Synapse setup for Debian 9 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
@@ -8,21 +8,16 @@ You will need at least a 1GB VPS although I recommend 2GB. You will also need a 
 
 Contact me at: perthchat@protonmail.com or at: @PC-Admin:perthchat.org if you get stuck or have an edit in mind.
 ***
-
-Licensing
-------------
+## Licensing
 
 This work is licensed under Creative Commons Attribution Share Alike 4.0, for more information on this license see here: https://creativecommons.org/licenses/by-sa/4.0/
 ***
-
-Server Setup
-------------
+## Server Setup
 
 Configure a Debian 9 server with auto-updates, security and SSH access.
 ***
 
-DNS Records
------------
+## DNS Records
 
 Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP. Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
 
@@ -30,8 +25,7 @@ Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 yourserver
 
 ***
 
-Prepare Server
---------------
+## Prepare Server
 
 `$ sudo apt install -y apt-transport-https lsof curl python`
 
@@ -42,8 +36,7 @@ deb-src https://matrix.org/packages/debian/ stretch main
 ```
 `$ sudo nano /etc/apt/sources.list.d/matrix.list`
 ***
-Installing Matrix
------------------
+## Installing Matrix
 
 `$ wget https://matrix.org/packages/debian/repo-key.asc`
 
@@ -64,9 +57,8 @@ In case you want to activate URL previews you need to additionally add python-lx
 `$ sudo apt install python-lxml -y`
 
 ***
-Installing Postgresql
------------------
-the default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
+## Installing Postgresql
+The default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
 
 So let's install postgresql and python driver:
 `$ sudo apt install postgresql postgresql-client python-psycopg2`
@@ -99,8 +91,7 @@ Exit from psql by typing `\q`
 All done. Let's exit from postgres account by typing exit so land back at our own user.
 
 ***
-Adopt Synapse config to use Postgresql
-------------------
+## Adopt Synapse config to use Postgresql
 Now as we have created the db and a user to be able to connect, we need to change the synapse config to use it:
 Open /etc/matrix-synapse/home.server.yaml
 Before the change it should look like
@@ -134,8 +125,7 @@ Now synapse should be ready and we can see if it starts without errors:
 
 ***
 
-Certbot Setup
--------------
+## Certbot Setup
 
 `$ sudo apt install certbot`
 
@@ -160,8 +150,7 @@ IMPORTANT NOTES:
 ```
 ***
 
-Setup SSL Auto-renewal
----------------------------
+## Setup SSL Auto-renewal
 
 for 3 month renewal, set a crontab:
 
@@ -197,14 +186,13 @@ echo SSL updated on: $now >> /home/username/letsencrypt-record
 
 $ sudo crontab -e
 ```
-# SSL Renewal
+## SSL Renewal
 01 00 01 Jan,Apr,Jul,Oct * /bin/sh /root/certbot-update.sh
 ```
 
 ***
 
-Configure NGINX with A+ SSL
----------------------------
+## Configure NGINX with A+ SSL
 
 Generate dhparam key and move it to your letsencrypt folder:
 ```
@@ -254,41 +242,43 @@ $ sudo service nginx start
 ```
 ***
 
-Fine Tune Synapse
------------------
+## Fine Tune Synapse
+There're two files that manage the behaviour of synapse:
+ 
+- Server config file in /etc/matrix-synapse/homeserver.yaml
+- Env file in /etc/default/matrix-synapse
 
-Edit /etc/matrix-synapse/homeserver.yaml:
-```
-$ sudo nano /etc/matrix-synapse/homeserver.yaml
+The first is used to do the configuration of synapse, the second is used to setup the environement synapse is running in. Some ENV variables have an effect on the configuration.
 
-```
-If you want you can also enable self registration and guest access:
-```
-enable_registration: True
+### Registration and guest access
+- Registration
 
-# Allows users to register as guests without a password/email/etc, and
-# participate in rooms hosted on this server which have been made
-# accessible to anonymous users.
-allow_guest_access: True
-```
+    File:  /etc/matrix-synapse/homeserver.yaml: **enable_registration: True**
+    
+- Guest Access
+
+    File: /etc/matrix-synapse/homeserver.yaml: **allow_guest_access: True**
+
 **There are other settings here you may want to adjust. I would do so one at a time, testing each change as you go.**
 
-Also check environmental variables in `/etc/default/matrix-synapse` for a small server (<=2GB), you will want to edit in a low cache factor (<.05):
-```
-$ sudo nano /etc/default/matrix-synapse
+### Cache factor
 
-# Specify environment variables used when running Synapse
-# SYNAPSE_CACHE_FACTOR=1 (default)
+For a small server (<=2GB), an adoption of the cache factor might improve performance. Some time ago the advice was to reduce the cache factor to use less RAM. Experience has shown that the effect is quite the opposite, see [Issue](https://github.com/matrix-org/synapse/pull/4276).
 
-SYNAPSE_CACHE_FACTOR=0.05
-```
-Then restart synapse and examine the RAM usage:
+So the new advice is to raise the cache factor instead, with a value of 2 being a good starting point:
+
+- Cache factor
+
+    File: /etc/default/matrix-synapse: SYNAPSE_CACHE_FACTOR=2.0
+ 
+***
+
+<span style="color:red">**Don't forget to restart synapse and examine the RAM usage after each change:**</span>
 
 `$ sudo service matrix-synapse restart`
 ***
 
-Load Riot-Web client into NGINX
--------------------------------
+## Load Riot-Web client into NGINX
 
 NGINX content location: /usr/share/nginx/html/index.html
 
@@ -334,8 +324,7 @@ Reset NGINX:
 You should be able to view and use Riot-Web through your URL now, test it out.
 ***
 
-Configure TURN service:
------------------------
+## Configure TURN service:
 
 Your matrix server still cannot make calls across NATs (different routers), for this we need to configure coturn.
 
