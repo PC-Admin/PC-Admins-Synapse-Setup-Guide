@@ -6,7 +6,7 @@ This guide covers complete Synapse setup for Debian 9 with Postgresql. It includ
 
 You will need at least a 1GB VPS although I recommend 2GB. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
 
-Contact me at: perthchat@protonmail.com or at: @PC-Admin:perthchat.org if you get stuck or have an edit in mind.
+Contact me at: @PC-Admin:perthchat.org if you get stuck or have an edit in mind.
 ***
 ## Licensing
 
@@ -152,7 +152,7 @@ IMPORTANT NOTES:
 
 ## Setup SSL Auto-renewal
 
-for 3 month renewal, set a crontab:
+for monthly renewal, set a crontab:
 
 `$ sudo crontab -e`
 
@@ -187,7 +187,7 @@ echo SSL updated on: $now >> /home/username/letsencrypt-record
 $ sudo crontab -e
 ```
 ## SSL Renewal
-01 00 01 Jan,Apr,Jul,Oct * /bin/sh /root/certbot-update.sh
+01 00 01 * * /bin/sh /root/certbot-update.sh
 ```
 
 ***
