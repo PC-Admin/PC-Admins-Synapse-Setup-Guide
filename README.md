@@ -309,6 +309,7 @@ $ sudo cp /etc/letsencrypt/live/testing355.com/privkey.pem /etc/matrix-synapse/p
 $ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/privkey.pem
 $ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/fullchain.pem
 ```
+***
 
 ## Load Riot-Web client into NGINX
 
