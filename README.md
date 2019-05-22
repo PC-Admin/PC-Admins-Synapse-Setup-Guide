@@ -4,7 +4,7 @@
 
 This guide covers complete Synapse setup for Debian 9 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
-You will need at least a 1GB VPS although I recommend 2GB. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
+You will need at least a 1GB VPS although I recommend 2GB for a small server. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
 
 Join the discussion at: #synapsesetupguide:matrix.org if you get stuck or have an edit in mind.
 ***
@@ -254,15 +254,16 @@ The first is used to do the configuration of synapse, the second is used to setu
 ### Registration and guest access
 - Registration
 
-    File:  /etc/matrix-synapse/homeserver.yaml: **enable_registration: True**
+    File:  /etc/matrix-synapse/homeserver.yaml: `**enable_registration: True**`
 
 - Admin email
 
-    File: /etc/matrix-synapse/homeserver.yaml: **admin_contact: 'mailto:admin@yourserver.org’**
+    File: /etc/matrix-synapse/homeserver.yaml: `**admin_contact: 'mailto:admin@yourserver.org’**`
 
 - TLS listener (Required for 1.0)
 
     File: /etc/matrix-synapse/homeserver.yaml: 
+```
   **- port: 8448**
     **type: http**
     **tls: true**
@@ -271,6 +272,7 @@ The first is used to do the configuration of synapse, the second is used to setu
     **resources:**
       **- names: [client, federation]**
     **compress: true**
+```
 
 - Certs (Required for 1.0)
 
