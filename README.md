@@ -254,32 +254,33 @@ The first is used to do the configuration of synapse, the second is used to setu
 ### Registration and guest access
 - Registration
 
-    File:  /etc/matrix-synapse/homeserver.yaml: `**enable_registration: True**`
+    File:  /etc/matrix-synapse/homeserver.yaml: `enable_registration: True`
 
 - Admin email
 
-    File: /etc/matrix-synapse/homeserver.yaml: `**admin_contact: 'mailto:admin@yourserver.org’**`
+    File: /etc/matrix-synapse/homeserver.yaml: `admin_contact: 'mailto:admin@yourserver.org’`
 
 - TLS listener (Required for 1.0)
 
     File: /etc/matrix-synapse/homeserver.yaml: 
 ```
-  **- port: 8448**
-    **type: http**
-    **tls: true**
-    **bind_addresses: ['::', '0.0.0.0']**
-    **x_forwarded: false**
-    **resources:**
-      **- names: [client, federation]**
-    **compress: true**
+  - port: 8448
+    type: http
+    tls: true
+    bind_addresses: ['::', '0.0.0.0']
+    x_forwarded: false
+    resources:
+      - names: [client, federation]
+    compress: true
 ```
 
-- Certs (Required for 1.0)
+- TLS certs (Required for 1.0)
 
     File: /etc/matrix-synapse/homeserver.yaml: 
-
-    **tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"**
-    **tls_private_key_path: "/etc/matrix-synapse/privkey.pem"**
+```
+    tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"
+    tls_private_key_path: "/etc/matrix-synapse/privkey.pem"
+```
 
 **There are other settings here you may want to adjust. I would do so one at a time, testing each change as you go.**
 
