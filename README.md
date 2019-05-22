@@ -6,7 +6,7 @@ This guide covers complete Synapse setup for Debian 9 with Postgresql. It includ
 
 You will need at least a 1GB VPS although I recommend 2GB. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
 
-Contact me at: @PC-Admin:perthchat.org if you get stuck or have an edit in mind.
+Join the discussion at: #synapsesetupguide:matrix.org if you get stuck or have an edit in mind.
 ***
 ## Licensing
 
@@ -14,12 +14,13 @@ This work is licensed under Creative Commons Attribution Share Alike 4.0, for mo
 ***
 ## Server Setup
 
-Configure a Debian 9 server with auto-updates, security and SSH access.
+Configure a Debian 9 server with auto-updates, security and SSH access. Ports 80, 443 and 8448 will need to be open for the web service and federation.
 ***
 
 ## DNS Records
 
-Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP. Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
+Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP. 
+Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
 
 Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 yourserver.org
 
@@ -27,7 +28,7 @@ Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 yourserver
 
 ## Prepare Server
 
-`$ sudo apt install -y apt-transport-https lsof curl python`
+`$ sudo apt install -y apt-transport-https`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
 ```
@@ -38,30 +39,30 @@ deb-src https://matrix.org/packages/debian/ stretch main
 ***
 ## Installing Matrix
 
-`$ wget https://matrix.org/packages/debian/repo-key.asc`
+`$ wget https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg`
 
-`$ sudo apt-key add repo-key.asc`
+`$ sudo apt-key add matrix-org-archive-keyring.gpg`
 
 `$ sudo apt update && sudo apt upgrade && sudo apt autoremove`
 
-`$ sudo apt install matrix-synapse -y`
+`$ sudo apt install matrix-synapse-py3`
 
 Asked to set name of your server, enter your desired URL here. (eg: yourserver.org)
 
 Finally check that the synapse server is shutdown
 
-`$ systemctl stop matrix-synapse`
+`$ sudo service matrix-synapse stop`
 
 In case you want to activate URL previews you need to additionally add python-lxml:
 
-`$ sudo apt install python-lxml -y`
+`$ sudo apt install python3-lxml -y`
 
 ***
 ## Installing Postgresql
 The default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
 
 So let's install postgresql and python driver:
-`$ sudo apt install postgresql postgresql-client python-psycopg2`
+`$ sudo apt install postgresql postgresql-client python3-psycopg2`
 
 Create Role and Database
 
@@ -86,14 +87,14 @@ Type: `psql`
 
 `postgres=# CREATE DATABASE synapse WITH ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0 OWNER synapse;`
 
-Exit from psql by typing `\q` 
+Exit from psql by typing `'\q'` 
 
-All done. Let's exit from postgres account by typing exit so land back at our own user.
+All done. Let's exit from postgres account by typing 'exit' so land back at our own user.
 
 ***
-## Adopt Synapse config to use Postgresql
+## Adapt Synapse config to use Postgresql
 Now as we have created the db and a user to be able to connect, we need to change the synapse config to use it:
-Open /etc/matrix-synapse/home.server.yaml
+Open /etc/matrix-synapse/homeserver.yaml
 Before the change it should look like
 ```
 # Database configuration
@@ -121,7 +122,7 @@ database:
 
 Now synapse should be ready and we can see if it starts without errors:
 
-`$ systemctl start matrix-synapse`
+`$ service matrix-synapse start`
 
 ***
 
@@ -254,10 +255,29 @@ The first is used to do the configuration of synapse, the second is used to setu
 - Registration
 
     File:  /etc/matrix-synapse/homeserver.yaml: **enable_registration: True**
-    
-- Guest Access
 
-    File: /etc/matrix-synapse/homeserver.yaml: **allow_guest_access: True**
+- Admin email
+
+    File: /etc/matrix-synapse/homeserver.yaml: **admin_contact: 'mailto:admin@yourserver.org’**
+
+- TLS listener (Required for 1.0)
+
+    File: /etc/matrix-synapse/homeserver.yaml: 
+  **- port: 8448**
+    **type: http**
+    **tls: true**
+    **bind_addresses: ['::', '0.0.0.0']**
+    **x_forwarded: false**
+    **resources:**
+      **- names: [client, federation]**
+    **compress: true**
+
+- Certs (Required for 1.0)
+
+    File: /etc/matrix-synapse/homeserver.yaml: 
+
+    **tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"**
+    **tls_private_key_path: "/etc/matrix-synapse/privkey.pem"**
 
 **There are other settings here you may want to adjust. I would do so one at a time, testing each change as you go.**
 
@@ -278,6 +298,15 @@ So the new advice is to raise the cache factor instead, with a value of 2 being 
 `$ sudo service matrix-synapse restart`
 ***
 
+## 1.0 fix, a crude cert copy. (Required for 1.0)
+
+```
+$ sudo cp /etc/letsencrypt/live/testing355.com/fullchain.pem /etc/matrix-synapse/fullchain.pem
+$ sudo cp /etc/letsencrypt/live/testing355.com/privkey.pem /etc/matrix-synapse/privkey.pem
+$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/privkey.pem
+$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/fullchain.pem
+```
+
 ## Load Riot-Web client into NGINX
 
 NGINX content location: /usr/share/nginx/html/index.html
@@ -286,10 +315,19 @@ https://github.com/vector-im/riot-web/releases/latest
 
 Download latest riot-web and move contents into nginx folder:
 ```
-~/riot-web$ wget https://github.com/vector-im/riot-web/releases/download/v0.11.4/riot-v0.11.4.tar.gz
-$ tar -zxvf ./riot-v0.11.4.tar.gz
+$ wget https://packages.riot.im/riot-release-key.gpg
+$ gpg --import riot-release-key.gpg
+$ wget https://github.com/vector-im/riot-web/releases/download/v1.1.2/riot-v1.1.2.tar.gz
+$ wget https://github.com/vector-im/riot-web/releases/download/v1.1.2/riot-v1.1.2.tar.gz.asc
+$ gpg --verify riot-v1.1.2.tar.gz.asc riot-v1.1.2.tar.gz
+	gpg: Signature made Wed 15 May 2019 09:39:31 AM EDT
+	gpg:                using RSA key 5EA7E0F70461A3BCBEBE4D5EF6151806032026F9
+	gpg:                issuer "releases@riot.im"
+	gpg: Good signature from "Riot Releases <releases@riot.im>"
+$ tar -zxvf ./riot-v1.1.2.tar.gz
 $ sudo rm -r /usr/share/nginx/html/*
-$ sudo mv ./riot-v0.11.4/* /usr/share/nginx/html/
+$ sudo mv ./riot-v1.1.2/* /usr/share/nginx/html/
+$ rm -r ./riot-*
 ```
 Create and edit config.json in nginx directory:
 ```
@@ -300,11 +338,21 @@ $ sudo nano /usr/share/nginx/html/config.json
 {
     "default_hs_url": "https://yourserver.org",
     "default_is_url": "https://vector.im",
+    "disable_custom_urls": false,
+    "disable_guests": false,
+    "disable_login_language_selector": false,
+    "disable_3pid_login": false,
     "brand": "Riot",
     "integrations_ui_url": "https://scalar.vector.im/",
     "integrations_rest_url": "https://scalar.vector.im/api",
+    "integrations_jitsi_widget_url": "https://scalar.vector.im/api/widgets/jitsi.html",
     "bug_report_endpoint_url": "https://riot.im/bugreports/submit",
-    "enableLabs": true,
+    "features": {
+        "feature_groups": "labs",
+        "feature_pinning": "labs"
+    },
+    "default_federate": true,
+    "default_theme": "dark",
     "roomDirectory": {
         "servers": [
             "matrix.org"
@@ -313,7 +361,12 @@ $ sudo nano /usr/share/nginx/html/config.json
     "welcomeUserId": "@riot-bot:matrix.org",
     "piwik": {
         "url": "https://piwik.riot.im/",
+        "whitelistedHSUrls": ["https://matrix.org"],
+        "whitelistedISUrls": ["https://vector.im", "https://matrix.org"],
         "siteId": 1
+    },
+    "enable_presence_by_hs_url": {
+        "https://matrix.org": false
     }
 }
 ```
