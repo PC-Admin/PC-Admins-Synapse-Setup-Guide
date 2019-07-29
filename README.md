@@ -446,4 +446,4 @@ You should land immediately to matrix-synapse's home directory which is /var/lib
 **Done!**
 ***
 
-Now your server is up and running consider registering on the matrixservers.net list of public servers: https://matrixservers.net/servers/ to get listed open an issue request at: https://github.com/Atreatis/matrixservers
+Now your server is up and running consider registering on the hello-matrix list of servers: https://www.hello-matrix.net/public_servers.php or at https://matrix.to/#/#hello-matrix:matrix.org
