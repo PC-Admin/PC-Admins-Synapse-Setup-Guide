@@ -1,10 +1,10 @@
 
-# PC-Admin's Synapse Setup Guide
+# PC-Admin's Synapse Setup Guide v2
 
 
-This guide covers complete Synapse setup for Debian 9 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
+This guide covers complete Synapse setup for Debian 10 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
-You will need at least a 1GB VPS although I recommend 2GB for a small server. You will also need a desired domain name. My guide will use ‘yourserver.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.yourserver.org’.
+You will need at least a 1GB VPS although I recommend 2GB for a small server. You will also need a desired domain name. My guide will use ‘example.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.example.org’.
 
 Join the discussion at: #synapsesetupguide:matrix.org if you get stuck or have an edit in mind.
 ***
@@ -14,26 +14,24 @@ This work is licensed under Creative Commons Attribution Share Alike 4.0, for mo
 ***
 ## Server Setup
 
-Configure a Debian 9 server with auto-updates, security and SSH access. Ports 80, 443 and 8448 will need to be open for the web service and federation.
+Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80, 443, 8448 and 3478 will need to be open for the web service, synapse federation and the coturn service.
 ***
-
 ## DNS Records
 
-Set up a simple A record. With ‘yourserver.org’ pointed to your servers IP. 
+Set up a simple A record. With ‘example.org’ pointed to your servers IP. 
 Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
 
-Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 yourserver.org
+Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 example.org
 
 ***
-
 ## Prepare Server
 
 `$ sudo apt install -y apt-transport-https`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
 ```
-deb https://matrix.org/packages/debian/ stretch main
-deb-src https://matrix.org/packages/debian/ stretch main
+deb https://matrix.org/packages/debian/ buster main
+deb-src https://matrix.org/packages/debian/ buster main
 ```
 `$ sudo nano /etc/apt/sources.list.d/matrix.list`
 ***
@@ -47,11 +45,11 @@ deb-src https://matrix.org/packages/debian/ stretch main
 
 `$ sudo apt install matrix-synapse-py3`
 
-Asked to set name of your server, enter your desired URL here. (eg: yourserver.org)
+Asked to set name of your server, enter your desired URL here. (eg: example.org)
 
 Finally check that the synapse server is shutdown
 
-`$ sudo service matrix-synapse stop`
+`$ sudo systemctl stop matrix-synapse`
 
 In case you want to activate URL previews you need to additionally add python-lxml:
 
@@ -62,6 +60,7 @@ In case you want to activate URL previews you need to additionally add python-lx
 The default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
 
 So let's install postgresql and python driver:
+
 `$ sudo apt install postgresql postgresql-client python3-psycopg2`
 
 Create Role and Database
@@ -94,8 +93,9 @@ All done. Let's exit from postgres account by typing 'exit' so land back at our 
 ***
 ## Adapt Synapse config to use Postgresql
 Now as we have created the db and a user to be able to connect, we need to change the synapse config to use it:
-Open /etc/matrix-synapse/homeserver.yaml
-Before the change it should look like
+`$ sudo nano /etc/matrix-synapse/homeserver.yaml`
+
+Before the change it should look like this:
 ```
 # Database configuration
 database:
@@ -107,13 +107,13 @@ database:
     database: "/var/lib/matrix-synapse/homeserver.db"
 ```
 
-That needs to be adopted and should look like:
+Modify it to look like this:
 ```
 database:
     name: psycopg2
     args:
         user: synapse
-        password: <your db user password>
+        password: your-db-user-password
         database: synapse
         host: localhost
         cp_min: 5
@@ -122,35 +122,43 @@ database:
 
 Now synapse should be ready and we can see if it starts without errors:
 
-`$ service matrix-synapse start`
+`$ sudo systemctl start matrix-synapse`
+
+`$ sudo systemctl status matrix-synapse`
 
 ***
-
 ## Certbot Setup
 
 `$ sudo apt install certbot`
 
 Test if server IP can be pinged first, if it can then run:
 
-`$ sudo certbot certonly`
+`$ sudo certbot certonly --rsa-key-size 4096`
 
 Choose ‘spin up a temporary webserver’
 
 enter a recovery email
 
-enter ‘yourserver.org’ as the domain
+enter ‘example.org’ as the domain
 
 ```
-Generating key (2048 bits): /etc/letsencrypt/keys/0000_key-certbot.pem
-Creating CSR: /etc/letsencrypt/csr/0000_csr-certbot.pem
-
 IMPORTANT NOTES:
- - Congratulations! Your certificate and chain have been saved at
-   /etc/letsencrypt/live/yourserver.org/fullchain.pem. Your cert will
-   expire on 2017-11-01. 
+ - Congratulations! Your certificate and chain have been saved at:
+   /etc/letsencrypt/live/example.org/fullchain.pem
+   Your key file has been saved at:
+   /etc/letsencrypt/live/example.org/privkey.pem
+   Your cert will expire on 2019-11-01.
 ```
-***
 
+Edit your new certificates .conf file to enforce 4096 renewal, add this line at the bottom:
+
+`$ sudo nano /etc/letsencrypt/renewal/gnuperth.org.conf`
+
+Add this line at the bottom:
+
+`rsa-key-size = 4096`
+
+***
 ## Setup SSL Auto-renewal
 
 for monthly renewal, set a crontab:
@@ -159,46 +167,15 @@ for monthly renewal, set a crontab:
 
 Insert Line:
 
-`@monthly certbot renew --quiet --post-hook "systemctl reload nginx"`
-
-^ If this doesn’t work you're experiencing the Debian 9 bug i noticed where letsencrypt doesn't want to renew while nginx is on. Here is how i automated it:
-
-`$ sudo /home/username/letsencrypt-record`
-
-`$ sudo chmod 644 /home/username/letsencrypt-record`
-
-`$ sudo touch /root/certbot-update.sh`
-
-`$ sudo chmod 744 /root/certbot-update.sh`
-
-`$ sudo nano /root/certbot-update.sh`
-
-Then edit in:
-```
-#!/bin/bash
-
-service nginx stop
-certbot renew --quiet
-service nginx start
-
-now=$(date +"%m_%d_%Y")
-echo SSL updated on: $now >> /home/username/letsencrypt-record
-```
-
-$ sudo crontab -e
-```
-## SSL Renewal
-01 00 01 * * /bin/sh /root/certbot-update.sh
-```
+`@monthly certbot renew --rsa-key-size 4096 --quiet --post-hook "systemctl reload nginx"`
 
 ***
-
 ## Configure NGINX with A+ SSL
 
 Generate dhparam key and move it to your letsencrypt folder:
 ```
-$ openssl dhparam -out dhparam2048.pem 2048
-$ sudo cp ./dhparam2048.pem /etc/letsencrypt/live/yourserver.org
+$ openssl dhparam -out dhparam4096.pem 4096
+$ sudo cp ./dhparam4096.pem /etc/letsencrypt/live/example.org
 ```
 Install NGINX and configure:
 ```
@@ -210,21 +187,26 @@ Add:
 ```
 server {
        listen         80;
-       server_name    yourserver.org;
+       server_name    example.org;
        return         301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl;
-    server_name yourserver.org;
+    gzip off;
+    server_name example.org;
 
-    ssl_certificate     /etc/letsencrypt/live/yourserver.org/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourserver.org/privkey.pem;
-    ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers		'ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS';
-    ssl_dhparam         /etc/letsencrypt/live/yourserver.org/dhparam2048.pem;
-    ssl_ecdh_curve      secp384r1;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    ssl_certificate     /etc/letsencrypt/live/example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.org/privkey.pem;
+    ssl_session_cache   shared:NGX_SSL_CACHE:10m;
+    ssl_session_timeout 12h;
+    ssl_protocols       TLSv1.3 TLSv1.2;
+    ssl_ciphers		"TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256";
+    ssl_dhparam         /etc/letsencrypt/live/example.org/dhparam4096.pem;
+    ssl_ecdh_curve      X25519:secp521r1:secp384r1:prime256v1;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubdomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
 
     location /_matrix {
         proxy_pass http://127.0.0.1:8008;
@@ -236,31 +218,33 @@ server {
 ^ Make sure to replace the server name here with yours!
 
 Restart service and renew SSL:
-```
-$ sudo service nginx stop
-$ sudo certbot renew
-$ sudo service nginx start
-```
-***
 
+`$ sudo certbot renew --rsa-key-size 4096 --quiet --post-hook "systemctl reload nginx"`
+
+If you get a 'Cert not yet due for renewal' error wait a few hours and try again.
+
+***
+## Cert Copy
+
+```
+$ sudo cp /etc/letsencrypt/live/testing355.com/fullchain.pem /etc/matrix-synapse/fullchain.pem
+$ sudo cp /etc/letsencrypt/live/testing355.com/privkey.pem /etc/matrix-synapse/privkey.pem
+$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/privkey.pem
+$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/fullchain.pem
+```
+
+***
 ## Fine Tune Synapse
 There're two files that manage the behaviour of synapse:
  
 - Server config file in /etc/matrix-synapse/homeserver.yaml
 - Env file in /etc/default/matrix-synapse
 
-The first is used to do the configuration of synapse, the second is used to setup the environement synapse is running in. Some ENV variables have an effect on the configuration.
+The first is used to do the configuration of synapse, the second is used to setup the environment synapse is running in.
 
 ### Registration and guest access
-- Registration
 
-    File:  /etc/matrix-synapse/homeserver.yaml: `enable_registration: True`
-
-- Admin email
-
-    File: /etc/matrix-synapse/homeserver.yaml: `admin_contact: 'mailto:admin@yourserver.org’`
-
-- TLS listener (Required for 1.0)
+- TLS listener (mandatory)
 
     File: /etc/matrix-synapse/homeserver.yaml: 
 ```
@@ -274,7 +258,7 @@ The first is used to do the configuration of synapse, the second is used to setu
     compress: true
 ```
 
-- TLS certs (Required for 1.0)
+- TLS certs (mandatory)
 
     File: /etc/matrix-synapse/homeserver.yaml: 
 ```
@@ -282,13 +266,38 @@ The first is used to do the configuration of synapse, the second is used to setu
     tls_private_key_path: "/etc/matrix-synapse/privkey.pem"
 ```
 
+- Federation Blacklist (optional):
+
+    File:  /etc/matrix-synapse/homeserver.yaml: 
+```
+    federation_ip_range_blacklist:
+    #  - '127.0.0.0/8'
+    #  - '10.0.0.0/8'
+    #  - '172.16.0.0/12'
+    #  - '192.168.0.0/16'
+    #  - '100.64.0.0/10'
+    #  - '169.254.0.0/16'
+    #  - '::1/128'
+    #  - 'fe80::/64'
+    #  - 'fc00::/7'
+```
+
+- Registration (optional)
+
+    File:  /etc/matrix-synapse/homeserver.yaml: `enable_registration: True`
+
+- Admin email (optional)
+
+    File: /etc/matrix-synapse/homeserver.yaml: `admin_contact: 'mailto:admin@example.org’`
+
+
 **There are other settings here you may want to adjust. I would do so one at a time, testing each change as you go.**
 
 ### Cache factor
 
-For a small server (<=2GB), an adoption of the cache factor might improve performance. Some time ago the advice was to reduce the cache factor to use less RAM. Experience has shown that the effect is quite the opposite, see [Issue](https://github.com/matrix-org/synapse/pull/4276).
+For a small server (<=2GB), an adoption of the cache factor might improve performance. Some time ago the advice was to lower the cache factor to use less RAM. Experience has shown that the effect is quite the opposite, see [Issue](https://github.com/matrix-org/synapse/pull/4276).
 
-So the new advice is to raise the cache factor instead, with a value of 2 being a good starting point:
+So the new advice is to **raise the cache factor to use less RAM**, with a value of 2 being a good starting point:
 
 - Cache factor
 
@@ -298,19 +307,9 @@ So the new advice is to raise the cache factor instead, with a value of 2 being 
 
 <span style="color:red">**Don't forget to restart synapse and examine the RAM usage after each change:**</span>
 
-`$ sudo service matrix-synapse restart`
+`$ sudo systemctl restart matrix-synapse`
+
 ***
-
-## 1.0 fix, a crude cert copy. (Required for 1.0)
-
-```
-$ sudo cp /etc/letsencrypt/live/testing355.com/fullchain.pem /etc/matrix-synapse/fullchain.pem
-$ sudo cp /etc/letsencrypt/live/testing355.com/privkey.pem /etc/matrix-synapse/privkey.pem
-$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/privkey.pem
-$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/fullchain.pem
-```
-***
-
 ## Load Riot-Web client into NGINX
 
 NGINX content location: /usr/share/nginx/html/index.html
@@ -321,17 +320,17 @@ Download latest riot-web and move contents into nginx folder:
 ```
 $ wget https://packages.riot.im/riot-release-key.gpg
 $ gpg --import riot-release-key.gpg
-$ wget https://github.com/vector-im/riot-web/releases/download/v1.1.2/riot-v1.1.2.tar.gz
-$ wget https://github.com/vector-im/riot-web/releases/download/v1.1.2/riot-v1.1.2.tar.gz.asc
-$ gpg --verify riot-v1.1.2.tar.gz.asc riot-v1.1.2.tar.gz
-	gpg: Signature made Wed 15 May 2019 09:39:31 AM EDT
-	gpg:                using RSA key 5EA7E0F70461A3BCBEBE4D5EF6151806032026F9
-	gpg:                issuer "releases@riot.im"
-	gpg: Good signature from "Riot Releases <releases@riot.im>"
-$ tar -zxvf ./riot-v1.1.2.tar.gz
+$ wget https://github.com/vector-im/riot-web/releases/download/v1.3.0/riot-v1.3.0.tar.gz
+$ wget https://github.com/vector-im/riot-web/releases/download/v1.3.0/riot-v1.3.0.tar.gz.asc
+$ gpg --verify riot-v1.3.0.tar.gz.asc riot-v1.3.0.tar.gz
+    gpg: Signature made Thu 18 Jul 2019 10:57:59 AM EDT
+    gpg:                using RSA key 5EA7E0F70461A3BCBEBE4D5EF6151806032026F9
+    gpg:                issuer "releases@riot.im"
+    gpg: Good signature from "Riot Releases <releases@riot.im>" [unknown]
+$ tar -zxvf ./riot-v1.3.0.tar.gz
 $ sudo rm -r /usr/share/nginx/html/*
-$ sudo mv ./riot-v1.1.2/* /usr/share/nginx/html/
-$ rm -r ./riot-*
+$ sudo mv ./riot-v1.3.0/* /usr/share/nginx/html/
+$ rm -r ./riot-v*
 ```
 Create and edit config.json in nginx directory:
 ```
@@ -340,8 +339,16 @@ $ sudo cp /usr/share/nginx/html/config.sample.json /usr/share/nginx/html/config.
 $ sudo nano /usr/share/nginx/html/config.json
 
 {
-    "default_hs_url": "https://yourserver.org",
-    "default_is_url": "https://vector.im",
+    "default_server_config": {
+        "m.homeserver": {
+            "base_url": "https://gnuperth.org",
+            "server_name": "gnuperth.org"
+        },
+        "m.identity_server": {
+            "base_url": "https://vector.im"
+        }
+    },
+    "disable_identity_server": false,
     "disable_custom_urls": false,
     "disable_guests": false,
     "disable_login_language_selector": false,
@@ -351,6 +358,8 @@ $ sudo nano /usr/share/nginx/html/config.json
     "integrations_rest_url": "https://scalar.vector.im/api",
     "integrations_jitsi_widget_url": "https://scalar.vector.im/api/widgets/jitsi.html",
     "bug_report_endpoint_url": "https://riot.im/bugreports/submit",
+    "defaultCountryCode": "AU",
+    "showLabsSettings": false,
     "features": {
         "feature_groups": "labs",
         "feature_pinning": "labs"
@@ -373,26 +382,27 @@ $ sudo nano /usr/share/nginx/html/config.json
         "https://matrix.org": false
     }
 }
+
 ```
 Reset NGINX:
 
 `$ sudo systemctl restart nginx`
 
 You should be able to view and use Riot-Web through your URL now, test it out.
-***
 
+***
 ## Configure TURN service:
 
 Your matrix server still cannot make calls across NATs (different routers), for this we need to configure coturn.
 
-Configure a simple A DNS record pointing turn.yourserver.org to your servers IP.
+Configure a simple A DNS record pointing turn.example.org to your servers IP.
 
 `$ sudo apt install coturn`
 
 Generate a ‘shared-secret-key’, this can be done like so:
 ```
-$ < /dev/urandom tr -dc _A-Z-a-z-0-9 head -c64
-V2OuWAio2B8sBpIt6vJk8Hmv1FRapQJDmNhhDEqjZf0mCyyIlOpf3PtWNT6WfWSh
+$ < /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-64};echo;
+5PFhfL1Eoe8Wa6WUxpR4wcwKUqkcl3UUg9QeOmpfnGHpW2O9cOsZ5yIoCDgMMdVP
 ```
 
 Edited coturn configs:
@@ -401,8 +411,8 @@ $ sudo nano /etc/turnserver.conf
 
 lt-cred-mech
 use-auth-secret
-static-auth-secret=[shared-secret-key]
-realm=turn.yourserver.org
+static-auth-secret=shared-secret-key
+realm=turn.example.org
 no-tcp-relay
 allowed-peer-ip=10.0.0.1
 user-quota=16
@@ -423,7 +433,7 @@ Edit homeserver.yaml:
 ```
 $ sudo nano /etc/matrix-synapse/homeserver.yaml
 
-turn_uris: [ "turn:turn.yourserver.org:3478?transport=udp", "turn:turn.yourserver.org:3478?transport=tcp" ]
+turn_uris: [ "turn:turn.example.org:3478?transport=udp", "turn:turn.example.org:3478?transport=tcp" ]
 turn_shared_secret: shared-secret-key
 turn_user_lifetime: 86400000
 turn_allow_guests: True
@@ -447,3 +457,6 @@ You should land immediately to matrix-synapse's home directory which is /var/lib
 ***
 
 Now your server is up and running consider registering on the hello-matrix list of servers: https://www.hello-matrix.net/public_servers.php or at https://matrix.to/#/#hello-matrix:matrix.org
+
+You should also familiarise yourself with the Synapse wiki: https://github.com/matrix-org/synapse/wiki
+
