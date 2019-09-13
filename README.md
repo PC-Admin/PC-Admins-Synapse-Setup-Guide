@@ -152,7 +152,7 @@ IMPORTANT NOTES:
 
 Edit your new certificates .conf file to enforce 4096 renewal, add this line at the bottom:
 
-`$ sudo nano /etc/letsencrypt/renewal/gnuperth.org.conf`
+`$ sudo nano /etc/letsencrypt/renewal/example.org.conf`
 
 Add this line at the bottom:
 
@@ -175,7 +175,7 @@ Insert Line:
 Generate dhparam key and move it to your letsencrypt folder:
 ```
 $ openssl dhparam -out dhparam4096.pem 4096
-$ sudo cp ./dhparam4096.pem /etc/letsencrypt/live/example.org
+$ sudo mv ./dhparam4096.pem /etc/letsencrypt/live/example.org
 ```
 Install NGINX and configure:
 ```
@@ -227,8 +227,8 @@ If you get a 'Cert not yet due for renewal' error wait a few hours and try again
 ## Cert Copy
 
 ```
-$ sudo cp /etc/letsencrypt/live/testing355.com/fullchain.pem /etc/matrix-synapse/fullchain.pem
-$ sudo cp /etc/letsencrypt/live/testing355.com/privkey.pem /etc/matrix-synapse/privkey.pem
+$ sudo cp /etc/letsencrypt/live/example.org/fullchain.pem /etc/matrix-synapse/fullchain.pem
+$ sudo cp /etc/letsencrypt/live/example.org/privkey.pem /etc/matrix-synapse/privkey.pem
 $ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/privkey.pem
 $ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/fullchain.pem
 ```
@@ -284,7 +284,7 @@ The first is used to do the configuration of synapse, the second is used to setu
 
 - Registration (optional)
 
-    File:  /etc/matrix-synapse/homeserver.yaml: `enable_registration: True`
+    File:  /etc/matrix-synapse/homeserver.yaml: `enable_registration: true`
 
 - Admin email (optional)
 
