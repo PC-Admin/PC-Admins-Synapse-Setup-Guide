@@ -26,7 +26,7 @@ Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 example.or
 ***
 ## Prepare Server
 
-`$ sudo apt install -y apt-transport-https`
+`$ sudo apt install -y apt-transport-https gnupg`
 
 Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
 ```
@@ -150,14 +150,6 @@ IMPORTANT NOTES:
    Your cert will expire on 2019-11-01.
 ```
 
-Edit your new certificates .conf file to enforce 4096 renewal, add this line at the bottom:
-
-`$ sudo nano /etc/letsencrypt/renewal/example.org.conf`
-
-Add this line at the bottom:
-
-`rsa-key-size = 4096`
-
 ***
 ## Setup SSL Auto-renewal
 
@@ -176,6 +168,7 @@ Generate dhparam key and move it to your letsencrypt folder:
 ```
 $ openssl dhparam -out dhparam4096.pem 4096
 $ sudo mv ./dhparam4096.pem /etc/letsencrypt/live/example.org
+$ sudo chown root:root /etc/letsencrypt/live/perthchat.org/dhparam4096.pem
 ```
 Install NGINX and configure:
 ```
@@ -341,8 +334,8 @@ $ sudo nano /usr/share/nginx/html/config.json
 {
     "default_server_config": {
         "m.homeserver": {
-            "base_url": "https://gnuperth.org",
-            "server_name": "gnuperth.org"
+            "base_url": "https://example.org",
+            "server_name": "example.org"
         },
         "m.identity_server": {
             "base_url": "https://vector.im"
