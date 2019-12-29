@@ -164,7 +164,7 @@ server {
 }
 
 server {
-    listen 443 ssl;
+    listen 443 ssl http2;
     gzip off;
     server_name example.org;
 
