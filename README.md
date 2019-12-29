@@ -21,7 +21,10 @@ Configure a Debian 10 server with auto-updates, security and SSH access. Ports 8
 Set up a simple A record. With ‘example.org’ pointed to your servers IP. 
 Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
 
-Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 example.org
+Example DNS SRV record:
+```
+_matrix._tcp        3600 IN SRV     10 0 8448 example.org.
+```
 
 ***
 ## Installing Synapse
