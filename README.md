@@ -24,44 +24,23 @@ Additionally you might setup a DNS SRV record, though it's only necessary, when 
 Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 example.org
 
 ***
-## Prepare Server
+## Installing Synapse
 
-`$ sudo apt install -y apt-transport-https gnupg`
+Follow [the official Debian install instructions](https://github.com/matrix-org/synapse/blob/master/INSTALL.md#debianubuntu) using the matrix.org packages.
 
-Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
-```
-deb https://matrix.org/packages/debian/ buster main
-deb-src https://matrix.org/packages/debian/ buster main
-```
-`$ sudo nano /etc/apt/sources.list.d/matrix.list`
-***
-## Installing Matrix
-
-`$ wget https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg`
-
-`$ sudo apt-key add matrix-org-archive-keyring.gpg`
-
-`$ sudo apt update && sudo apt upgrade && sudo apt autoremove`
-
-`$ sudo apt install matrix-synapse-py3`
-
-Asked to set name of your server, enter your desired URL here. (eg: example.org)
+You will be asked to set the name of your server after `apt install`, enter your desired URL here. (eg: example.org)
 
 Finally check that the synapse server is shutdown
 
 `$ sudo systemctl stop matrix-synapse`
 
-In case you want to activate URL previews you need to additionally add python-lxml:
-
-`$ sudo apt install python3-lxml -y`
-
 ***
 ## Installing Postgresql
 The default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
 
-So let's install postgresql and python driver:
+So let's install postgresql:
 
-`$ sudo apt install postgresql postgresql-client python3-psycopg2`
+`$ sudo apt install postgresql postgresql-client`
 
 Create Role and Database
 
