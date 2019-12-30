@@ -23,7 +23,7 @@ Additionally you might setup a DNS SRV record, though it's only necessary, when 
 
 Example DNS SRV record:
 ```
-_matrix._tcp        3600 IN SRV     10 0 8448 example.org.
+_matrix._tcp        3600 IN SRV     10 0 8448 example.org
 ```
 
 ***
@@ -218,14 +218,14 @@ The first is used to do the configuration of synapse, the second is used to setu
 
     File: /etc/matrix-synapse/homeserver.yaml: 
 ```yaml
-  - port: 8448
-    type: http
-    tls: true
-    bind_addresses: ['::', '0.0.0.0']
-    x_forwarded: false
-    resources:
-      - names: [client, federation]
-    compress: true
+#  - port: 8448
+#    type: http
+#    tls: true
+#    bind_addresses: ['::', '0.0.0.0']
+#    x_forwarded: false
+#    resources:
+#      - names: [client, federation]
+#    compress: true
 ```
 
   remove it.
@@ -236,8 +236,8 @@ The first is used to do the configuration of synapse, the second is used to setu
 
     File: /etc/matrix-synapse/homeserver.yaml: 
 ```yaml
-    tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"
-    tls_private_key_path: "/etc/matrix-synapse/privkey.pem"
+#    tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"
+#    tls_private_key_path: "/etc/matrix-synapse/privkey.pem"
 ```
 
 - Federation Blacklist (optional):
