@@ -21,47 +21,29 @@ Configure a Debian 10 server with auto-updates, security and SSH access. Ports 8
 Set up a simple A record. With ‘example.org’ pointed to your servers IP. 
 Additionally you might setup a DNS SRV record, though it's only necessary, when you changed your federation port to listen on another port the the default port 8448.
 
-Example DNS SRV record: _matrix._tcp        3600 IN SRV     10 0 8448 example.org
+Example DNS SRV record:
+```
+_matrix._tcp        3600 IN SRV     10 0 8448 example.org.
+```
 
 ***
-## Prepare Server
+## Installing Synapse
 
-`$ sudo apt install -y apt-transport-https gnupg`
+Follow [the official Debian install instructions](https://github.com/matrix-org/synapse/blob/master/INSTALL.md#debianubuntu) using the matrix.org packages.
 
-Inside /etc/apt/sources.list.d/matrix.list, add the following two lines:
-```
-deb https://matrix.org/packages/debian/ buster main
-deb-src https://matrix.org/packages/debian/ buster main
-```
-`$ sudo nano /etc/apt/sources.list.d/matrix.list`
-***
-## Installing Matrix
-
-`$ wget https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg`
-
-`$ sudo apt-key add matrix-org-archive-keyring.gpg`
-
-`$ sudo apt update && sudo apt upgrade && sudo apt autoremove`
-
-`$ sudo apt install matrix-synapse-py3`
-
-Asked to set name of your server, enter your desired URL here. (eg: example.org)
+You will be asked to set the name of your server after `apt install`, enter your desired URL here. (eg: example.org)
 
 Finally check that the synapse server is shutdown
 
 `$ sudo systemctl stop matrix-synapse`
 
-In case you want to activate URL previews you need to additionally add python-lxml:
-
-`$ sudo apt install python3-lxml -y`
-
 ***
 ## Installing Postgresql
 The default synapse install generates a config that uses sqlite. It has the advantage of being easy to setup as there's no db server setup to take care about. But from my experience the performance penalty is quite big and if you want to do something more then testing or running a small non federated server, switching to postgres should be a mandatory step.
 
-So let's install postgresql and python driver:
+So let's install postgresql:
 
-`$ sudo apt install postgresql postgresql-client python3-psycopg2`
+`$ sudo apt install postgresql postgresql-client`
 
 Create Role and Database
 
@@ -177,7 +159,7 @@ $ sudo nano /etc/nginx/conf.d/matrix.conf
 ```
 Add:
 
-```
+```nginx
 server {
        listen         80;
        server_name    example.org;
@@ -185,7 +167,8 @@ server {
 }
 
 server {
-    listen 443 ssl;
+    listen 443 ssl http2;
+    listen 8448 ssl http2;  # for federation (skip if pointing SRV to port 443)
     gzip off;
     server_name example.org;
 
@@ -217,16 +200,6 @@ Restart service and renew SSL:
 If you get a 'Cert not yet due for renewal' error wait a few hours and try again.
 
 ***
-## Cert Copy
-
-```
-$ sudo cp /etc/letsencrypt/live/example.org/fullchain.pem /etc/matrix-synapse/fullchain.pem
-$ sudo cp /etc/letsencrypt/live/example.org/privkey.pem /etc/matrix-synapse/privkey.pem
-$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/privkey.pem
-$ sudo chown matrix-synapse:nogroup /etc/matrix-synapse/fullchain.pem
-```
-
-***
 ## Fine Tune Synapse
 There're two files that manage the behaviour of synapse:
  
@@ -237,10 +210,14 @@ The first is used to do the configuration of synapse, the second is used to setu
 
 ### Registration and guest access
 
-- TLS listener (mandatory)
+- Remove TLS listener
+
+  We've configured nginx to reverse proxy our federation traffic, so we can remove/comment out the federation listener.
+
+  If you can find the following...
 
     File: /etc/matrix-synapse/homeserver.yaml: 
-```
+```yaml
   - port: 8448
     type: http
     tls: true
@@ -251,10 +228,14 @@ The first is used to do the configuration of synapse, the second is used to setu
     compress: true
 ```
 
-- TLS certs (mandatory)
+  remove it.
+
+- Remove TLS certs
+
+  We won't have a TLS listener, so we can remove this too.
 
     File: /etc/matrix-synapse/homeserver.yaml: 
-```
+```yaml
     tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"
     tls_private_key_path: "/etc/matrix-synapse/privkey.pem"
 ```
