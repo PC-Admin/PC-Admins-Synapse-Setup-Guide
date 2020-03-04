@@ -4,7 +4,7 @@
 
 This guide covers complete Synapse setup for Debian 10 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. You can use this guide to make your own encrypted chat server.
 
-You will need at least a 1GB VPS although I recommend 2GB for a small server. You will also need a desired domain name. My guide will use ‘example.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.example.org’.
+You will need at least a 1GB VPS although I recommend 2GB for a small server. You will also need a desired domain name. My guide will use ‘example.org’ with Riot-Web hosted through NGINX on the same server. You may wish to have your matrix service hosted at another prefix like ‘matrix.example.org’, although you probably shouldn't make that your server name. The server name is the public facing name for your server and it can't be changed later. You wouldn't have an email address like jessica@email.gmail.com so don't use a Matrix server name like matrix.example.org.
 
 Join the discussion at: #synapsesetupguide:matrix.org if you get stuck or have an edit in mind.
 ***
@@ -95,18 +95,12 @@ database:
     name: psycopg2
     args:
         user: synapse
-        password: your-db-user-password
+        password: "your-db-user-password"
         database: synapse
         host: localhost
         cp_min: 5
         cp_max: 10
 ```
-
-Now synapse should be ready and we can see if it starts without errors:
-
-`$ sudo systemctl start matrix-synapse`
-
-`$ sudo systemctl status matrix-synapse`
 
 ***
 ## Certbot Setup
@@ -150,7 +144,7 @@ Generate dhparam key and move it to your letsencrypt folder:
 ```
 $ openssl dhparam -out dhparam4096.pem 4096
 $ sudo mv ./dhparam4096.pem /etc/letsencrypt/live/example.org
-$ sudo chown root:root /etc/letsencrypt/live/perthchat.org/dhparam4096.pem
+$ sudo chown root:root /etc/letsencrypt/live/example.org/dhparam4096.pem
 ```
 Install NGINX and configure:
 ```
@@ -198,6 +192,13 @@ Restart service and renew SSL:
 `$ sudo certbot renew --rsa-key-size 4096 --quiet --post-hook "systemctl reload nginx"`
 
 If you get a 'Cert not yet due for renewal' error wait a few hours and try again.
+
+
+Now synapse should be ready and we can see if it starts without errors:
+
+`$ sudo systemctl start matrix-synapse`
+
+`$ sudo systemctl status matrix-synapse`
 
 ***
 ## Fine Tune Synapse
@@ -307,6 +308,8 @@ $ sudo mv ./riot-v1.3.0/* /usr/share/nginx/html/
 $ rm -r ./riot-v*
 ```
 Create and edit config.json in nginx directory:
+
+Feel free to customize config.json to suit your needs. All of the lines in config.json are optional.
 ```
 $ sudo cp /usr/share/nginx/html/config.sample.json /usr/share/nginx/html/config.json
 
@@ -356,8 +359,8 @@ $ sudo nano /usr/share/nginx/html/config.json
         "https://matrix.org": false
     }
 }
-
 ```
+
 Reset NGINX:
 
 `$ sudo systemctl restart nginx`
