@@ -257,6 +257,10 @@ The first is used to do the configuration of synapse, the second is used to setu
     #  - 'fc00::/7'
 ```
 
+- Allow public room list to federate (optional)
+
+    File:  /etc/matrix-synapse/homeserver.yaml: `allow_public_rooms_over_federation: true`
+
 - Registration (optional)
 
     File:  /etc/matrix-synapse/homeserver.yaml: `enable_registration: true`
