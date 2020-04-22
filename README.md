@@ -598,7 +598,7 @@ server {
 }
 ```
 
-Check jitsi.example.org, if it fails restart these services:
+Inspect jitsi.example.org, if it isn't showing jitsi restart these services:
 
-`$ sudo service jitsi-videobridge2 restart`
-`$ sudo service nginx restart`
+```$ sudo service jitsi-videobridge2 restart
+$ sudo service nginx restart```
