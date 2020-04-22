@@ -434,12 +434,12 @@ $ cd
 
 You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here.
 
-**Done!**
 ***
+## Done!
 
-Now your server is up and running consider registering on the hello-matrix list of servers: https://www.hello-matrix.net/public_servers.php or at https://matrix.to/#/#hello-matrix:matrix.org
+Your Synapse is now up and running and your hosting the latest Riot through the Nginx web server.
 
-You should also familiarise yourself with the Synapse wiki: https://github.com/matrix-org/synapse/wiki
+You should familiarise yourself with the Synapse wiki: https://github.com/matrix-org/synapse/wiki
 
 ***
 ## Extra - Jitsi Setup
