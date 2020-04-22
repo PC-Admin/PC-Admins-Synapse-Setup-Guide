@@ -441,3 +441,164 @@ Now your server is up and running consider registering on the hello-matrix list 
 
 You should also familiarise yourself with the Synapse wiki: https://github.com/matrix-org/synapse/wiki
 
+***
+## Extra - Jitsi Setup
+
+Jitsi is the usual conferencing software used with Matrix instances, hosting your own might give you reduced latency.
+
+First create a new  A record for jitsi.example.org
+
+Expand SSL cert so jitsi.example.org is a known subdomain:
+```
+$ sudo service nginx stop
+$ sudo certbot certonly --rsa-key-size 4096 -d example.org -d jitsi.example.org
+Press (1) then (e)
+$ sudo service nginx start
+```
+Then install jitsi:
+```
+$ sudo nano /etc/apt/sources.list.d/jitsi-unstable.list
+add: 'deb https://download.jitsi.org unstable/'
+$ wget -qO -  https://download.jitsi.org/jitsi-key.gpg.key | sudo apt-key add -
+$ sudo apt update
+$ sudo apt -y install jitsi-meet
+```
+When prompted for hostname of the current installation for jisti-videobridge2:
+- enter 'jitsi.example.org'
+- enter '/etc/letsencrypt/live/example.org/privkey.pem'
+- enter '/etc/letsencrypt/live/example.org/fullchain.pem'
+
+Edited jitsi nginx conf like so:
+
+```
+$ sudo nano /etc/nginx/sites-enabled/jitsi.example.org.conf
+
+server_names_hash_bucket_size 64;
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name jitsi.example.org;
+
+    location ^~ /.well-known/acme-challenge/ {
+       default_type "text/plain";
+       root         /usr/share/jitsi-meet;
+    }
+    location = /.well-known/acme-challenge/ {
+       return 404;
+    }
+    location / {
+       return 301 https://$host$request_uri;
+    }
+}
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name jitsi.example.org;
+
+    ssl_session_cache   shared:NGX_SSL_CACHE:10m;
+    ssl_session_timeout 12h;
+    ssl_protocols TLSv1.3 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256";
+    ssl_dhparam         /etc/letsencrypt/live/example.org/dhparam4096.pem;
+    ssl_ecdh_curve      X25519:secp521r1:secp384r1:prime256v1;
+
+    add_header Strict-Transport-Security "max-age=15552000";
+    add_header X-Content-Type-Options "nosniff" always;
+
+    ssl_certificate /etc/letsencrypt/live/example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.org/privkey.pem;
+
+    root /usr/share/jitsi-meet;
+
+    # ssi on with javascript for multidomain variables in config.js
+    ssi on;
+    ssi_types application/x-javascript application/javascript;
+
+    index index.html index.htm;
+    error_page 404 /static/404.html;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json;
+    gzip_vary on;
+
+    location = /config.js {
+        alias /etc/jitsi/meet/jitsi.example.org-config.js;
+    }
+
+    location = /external_api.js {
+        alias /usr/share/jitsi-meet/libs/external_api.min.js;
+    }
+
+    #ensure all static content can always be found first
+    location ~ ^/(libs|css|static|images|fonts|lang|sounds|connection_optimization|.well-known)/(.*)$
+    {
+        add_header 'Access-Control-Allow-Origin' '*';
+        alias /usr/share/jitsi-meet/$1/$2;
+    }
+
+    # BOSH
+    location = /http-bind {
+        proxy_pass      http://localhost:5280/http-bind;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Host $http_host;
+    }
+
+    # xmpp websockets
+    location = /xmpp-websocket {
+        proxy_pass http://127.0.0.1:5280/xmpp-websocket?prefix=$prefix&$args;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $http_host;
+        tcp_nodelay on;
+    }
+
+    location ~ ^/([^/?&:'"]+)$ {
+        try_files $uri @root_path;
+    }
+
+    location @root_path {
+        rewrite ^/(.*)$ / break;
+    }
+
+    location ~ ^/([^/?&:'"]+)/config.js$
+    {
+       set $subdomain "$1.";
+       set $subdir "$1/";
+
+       alias /etc/jitsi/meet/jitsi.example.org-config.js;
+    }
+
+    #Anything that didn't match above, and isn't a real file, assume it's a room name and redirect to /
+    location ~ ^/([^/?&:'"]+)/(.*)$ {
+        set $subdomain "$1.";
+        set $subdir "$1/";
+        rewrite ^/([^/?&:'"]+)/(.*)$ /$2;
+    }
+
+    # BOSH for subdomains
+    location ~ ^/([^/?&:'"]+)/http-bind {
+        set $subdomain "$1.";
+        set $subdir "$1/";
+        set $prefix "$1";
+
+        rewrite ^/(.*)$ /http-bind;
+    }
+
+    # websockets for subdomains
+    location ~ ^/([^/?&:'"]+)/xmpp-websocket {
+        set $subdomain "$1.";
+        set $subdir "$1/";
+        set $prefix "$1";
+
+        rewrite ^/(.*)$ /xmpp-websocket;
+    }
+}
+```
+
+Check jitsi.example.org, if it fails restart these services:
+
+`$ sudo service jitsi-videobridge2 restart`
+`$ sudo service nginx restart`
