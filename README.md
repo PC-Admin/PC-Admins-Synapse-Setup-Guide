@@ -1,5 +1,5 @@
 
-# PC-Admin's Synapse Setup Guide v2
+# PC-Admin's Synapse Setup Guide
 
 
 This guide covers complete Synapse setup for Debian 10 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. As well as additional steps to configure a jitsi instance for conferencing. You can use this guide to make your own encrypted chat server.
@@ -14,7 +14,7 @@ This work is licensed under Creative Commons Attribution Share Alike 4.0, for mo
 ***
 ## Server Setup
 
-Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80, 443, 8448 and 3478 will need to be open for the web service, synapse federation and the coturn service.
+Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478/tcp, 4443/tcp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
 ***
 ## DNS Records
 
@@ -109,7 +109,7 @@ database:
 
 Test if server IP can be pinged first, if it can then run:
 
-`$ sudo certbot certonly --rsa-key-size 4096`
+`$ sudo certbot certonly --rsa-key-size 4096 -d example.org -d jitsi.example.org`
 
 Choose ‘spin up a temporary webserver’
 
@@ -153,8 +153,7 @@ $ sudo nano /etc/nginx/conf.d/matrix.conf
 ```
 Add:
 
-```nginx
-server {
+```server {
        listen         80;
        server_name    example.org;
        return         301 https://$server_name$request_uri;
@@ -164,7 +163,7 @@ server {
     listen 443 ssl http2;
     listen 8448 ssl http2;  # for federation (skip if pointing SRV to port 443)
     gzip off;
-    server_name example.org;
+    server_name testing355.com;
 
     ssl_certificate     /etc/letsencrypt/live/example.org/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/example.org/privkey.pem;
@@ -175,12 +174,18 @@ server {
     ssl_dhparam         /etc/letsencrypt/live/example.org/dhparam4096.pem;
     ssl_ecdh_curve      X25519:secp521r1:secp384r1:prime256v1;
 
-    add_header Strict-Transport-Security "max-age=63072000; includeSubdomains" always;
+    #add_header Strict-Transport-Security "max-age=31536000; includeSubdomains" always;
     add_header X-Content-Type-Options "nosniff" always;
 
     location /_matrix {
         proxy_pass http://127.0.0.1:8008;
         proxy_set_header X-Forwarded-For $remote_addr;
+    }
+
+    location /.well-known/matrix/client {
+        return 200 '{ "m.homeserver": { "base_url": "https://example.org" }, "im.vector.riot.jitsi": { "preferredDomain": "jitsi.example.org" } }';
+        add_header access-control-allow-origin *;
+        add_header content-type application/json;
     }
 }
 ```
@@ -299,16 +304,16 @@ Download latest riot-web and move contents into nginx folder:
 ```
 $ wget https://packages.riot.im/riot-release-key.gpg
 $ gpg --import riot-release-key.gpg
-$ wget https://github.com/vector-im/riot-web/releases/download/v1.3.0/riot-v1.3.0.tar.gz
-$ wget https://github.com/vector-im/riot-web/releases/download/v1.3.0/riot-v1.3.0.tar.gz.asc
-$ gpg --verify riot-v1.3.0.tar.gz.asc riot-v1.3.0.tar.gz
-    gpg: Signature made Thu 18 Jul 2019 10:57:59 AM EDT
-    gpg:                using RSA key 5EA7E0F70461A3BCBEBE4D5EF6151806032026F9
-    gpg:                issuer "releases@riot.im"
-    gpg: Good signature from "Riot Releases <releases@riot.im>" [unknown]
-$ tar -zxvf ./riot-v1.3.0.tar.gz
+$ wget https://github.com/vector-im/riot-web/releases/download/v1.6.0/riot-v1.6.0.tar.gz
+$ wget https://github.com/vector-im/riot-web/releases/download/v1.6.0/riot-v1.6.0.tar.gz.asc
+$ gpg --verify riot-v1.6.0.tar.gz.asc riot-v1.6.0.tar.gz
+gpg: Signature made Fri 01 May 2020 03:37:12 PM UTC
+gpg:                using RSA key 5EA7E0F70461A3BCBEBE4D5EF6151806032026F9
+gpg:                issuer "releases@riot.im"
+gpg: Good signature from "Riot Releases <releases@riot.im>" [unknown]
+$ tar -zxvf ./riot-v1.6.0.tar.gz
 $ sudo rm -r /usr/share/nginx/html/*
-$ sudo mv ./riot-v1.3.0/* /usr/share/nginx/html/
+$ sudo mv ./riot-v1.6.0/* /usr/share/nginx/html/
 $ rm -r ./riot-v*
 ```
 Create and edit config.json in nginx directory:
@@ -417,61 +422,38 @@ $ sudo nano /etc/matrix-synapse/homeserver.yaml
 turn_uris: [ "turn:turn.example.org:3478?transport=udp", "turn:turn.example.org:3478?transport=tcp" ]
 turn_shared_secret: shared-secret-key
 turn_user_lifetime: 86400000
-turn_allow_guests: True
+turn_allow_guests: true
 ```
 Restart both coturn and matrix-synapse and test:
 ```
 $ sudo systemctl start coturn
 $ sudo systemctl restart matrix-synapse
 ```
-***
-Now that Synapse is shutdown and we can login to matrix-synapse user:
-
-```
-$ sudo -u matrix-synapse -s /bin/bash
-$ cd
-```
-
-You should land immediately to matrix-synapse's home directory which is /var/lib/matrix-synapse. Typing cd anytime brings you back here.
 
 ***
-## Done!
-
-Your Synapse is now up and running and your hosting the latest Riot through the Nginx web server.
-
-You should familiarise yourself with the Synapse wiki: https://github.com/matrix-org/synapse/wiki
-
-***
-## Extra - Jitsi Setup
+## Jitsi Setup
 
 Jitsi is the usual conferencing software used with Matrix instances, hosting your own might give you reduced latency.
 
-First create a new  A record for jitsi.example.org
+Configure a simple A DNS record pointing jitsi.example.org to your servers IP.
 
-Expand SSL cert so jitsi.example.org is a known subdomain:
+Install jitsi:
 ```
-$ sudo service nginx stop
-$ sudo certbot certonly --rsa-key-size 4096 -d example.org -d jitsi.example.org
-Press (1) then (e)
-$ sudo service nginx start
-```
-Then install jitsi:
-```
-$ sudo nano /etc/apt/sources.list.d/jitsi-unstable.list
-add: 'deb https://download.jitsi.org unstable/'
+$ echo "deb https://download.jitsi.org unstable/" | sudo tee /etc/apt/sources.list.d/jitsi-unstable.list
 $ wget -qO -  https://download.jitsi.org/jitsi-key.gpg.key | sudo apt-key add -
 $ sudo apt update
 $ sudo apt -y install jitsi-meet
 ```
 When prompted for hostname of the current installation for jisti-videobridge2:
 - enter 'jitsi.example.org'
+- Select 'I want to use my own certificate.'
 - enter '/etc/letsencrypt/live/example.org/privkey.pem'
 - enter '/etc/letsencrypt/live/example.org/fullchain.pem'
 
-Edited jitsi nginx conf like so:
+Edited jitsi nginx config like so:
 
 ```
-$ sudo nano /etc/nginx/sites-enabled/jitsi.example.org.conf
+$ sudo nano /etc/nginx/sites-available/jitsi.testing355.com.conf
 
 server_names_hash_bucket_size 64;
 
@@ -496,16 +478,11 @@ server {
     listen [::]:443 ssl http2;
     server_name jitsi.example.org;
 
-    ssl_session_cache   shared:NGX_SSL_CACHE:10m;
-    ssl_session_timeout 12h;
     ssl_protocols TLSv1.3 TLSv1.2;
     ssl_prefer_server_ciphers on;
     ssl_ciphers "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256";
-    ssl_dhparam         /etc/letsencrypt/live/example.org/dhparam4096.pem;
-    ssl_ecdh_curve      X25519:secp521r1:secp384r1:prime256v1;
 
-    add_header Strict-Transport-Security "max-age=15552000";
-    add_header X-Content-Type-Options "nosniff" always;
+    add_header Strict-Transport-Security "max-age=31536000";
 
     ssl_certificate /etc/letsencrypt/live/example.org/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/example.org/privkey.pem;
@@ -598,7 +575,54 @@ server {
 }
 ```
 
-Inspect jitsi.example.org, if it isn't showing jitsi restart these services:
+Comment out the 443 section in /etc/nginx/modules-enabled/60-jitsi-meet.conf:
 
-```$ sudo service jitsi-videobridge2 restart
-$ sudo service nginx restart```
+```
+$ sudo nano /etc/nginx/modules-enabled/60-jitsi-meet.conf
+ 
+# this is jitsi-meet nginx module configuration
+# this forward all http traffic to the nginx virtual host port
+# and the rest to the turn server
+
+stream {
+    upstream web {
+        server 127.0.0.1:4444;
+    }
+    upstream turn {
+        server 127.0.0.1:4445;
+    }
+    # since 1.13.10
+    map $ssl_preread_alpn_protocols $upstream {
+        ~\bh2\b         web;
+        ~\bhttp/1\.     web;
+        default         turn;
+    }
+
+#    server {
+#        listen 443;
+#        listen [::]:443;
+#
+#        # since 1.11.5
+#        ssl_preread on;
+#        proxy_pass $upstream;
+#
+#        # Increase buffer to serve video
+#        proxy_buffer_size 10m;
+#    }
+}
+```
+
+Uncomment the 'add_header Strict-Transport-Security..' line in /etc/nginx/conf.d/matrix.conf.
+
+`$ sudo nano /etc/nginx/conf.d/matrix.conf`
+
+Attempt to restart nginx and inspect jitsi.example.org:
+
+`$ sudo service nginx restart`
+
+***
+## Done!
+
+Your Synapse is now up and running and your hosting the latest Riot through the Nginx web server. You're also running a jitsi-meet instance.
+
+You should familiarise yourself with the Synapse wiki: https://github.com/matrix-org/synapse/wiki
