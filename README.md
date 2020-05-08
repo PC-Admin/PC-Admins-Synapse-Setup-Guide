@@ -153,7 +153,8 @@ $ sudo nano /etc/nginx/conf.d/matrix.conf
 ```
 Add:
 
-```server {
+```
+server {
        listen         80;
        server_name    example.org;
        return         301 https://$server_name$request_uri;
