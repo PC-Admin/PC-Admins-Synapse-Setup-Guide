@@ -75,6 +75,7 @@ All done. Let's exit from postgres account by typing 'exit' so land back at our 
 ***
 ## Adapt Synapse config to use Postgresql
 Now as we have created the db and a user to be able to connect, we need to change the synapse config to use it:
+
 `$ sudo nano /etc/matrix-synapse/homeserver.yaml`
 
 Before the change it should look like this:
