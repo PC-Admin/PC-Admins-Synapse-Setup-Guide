@@ -144,7 +144,7 @@ Insert Line:
 Generate dhparam key and move it to your letsencrypt folder:
 ```
 $ openssl dhparam -out dhparam4096.pem 4096
-$ sudo mv ./dhparam4096.pem /etc/letsencrypt/live/example.org
+$ sudo mv ./dhparam4096.pem /etc/letsencrypt/live/example.org/dhparam4096.pem
 $ sudo chown root:root /etc/letsencrypt/live/example.org/dhparam4096.pem
 ```
 Install NGINX and configure:
