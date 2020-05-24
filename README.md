@@ -14,7 +14,7 @@ This work is licensed under Creative Commons Attribution Share Alike 4.0, for mo
 ***
 ## Server Setup
 
-Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478/tcp, 4443/tcp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
+Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478, 4445/udp, 4446/udp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
 ***
 ## DNS Records
 
@@ -156,9 +156,9 @@ Add:
 
 ```
 server {
-       listen         80;
-       server_name    example.org;
-       return         301 https://$server_name$request_uri;
+    listen         80;
+    server_name    example.org;
+    return         301 https://$server_name$request_uri;
 }
 
 server {
@@ -385,7 +385,40 @@ Your matrix server still cannot make calls across NATs (different routers), for 
 
 Configure a simple A DNS record pointing turn.example.org to your servers IP.
 
+Install coturn:
 `$ sudo apt install coturn`
+
+Jitsi will hijack your default coturn service so lets create a secondary one:
+`$ sudo cp /lib/systemd/system/coturn.service /lib/systemd/system/coturn2.service`
+
+Edit the service file:
+```
+$ sudo nano /lib/systemd/system/coturn2.service
+
+[Unit]
+Description=coTURN STUN/TURN Server
+Documentation=man:coturn(1) man:turnadmin(1) man:turnserver(1)
+After=network.target
+
+[Service]
+User=turnserver
+Group=turnserver
+Type=forking
+RuntimeDirectory=turnserver
+PIDFile=/run/turnserver/turnserver2.pid
+ExecStart=/usr/bin/turnserver --daemon -c /etc/turnserver2.conf --pidfile /run/turnserver/turnserver2.pid
+#FixMe: turnserver exit faster than it is finshing the setup and ready for handling the connection.
+ExecStartPost=/bin/sleep 2
+Restart=on-failure
+InaccessibleDirectories=/home
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload service files:
+`$ sudo systemctl daemon-reload`
 
 Generate a ‘shared-secret-key’, this can be done like so:
 ```
@@ -393,21 +426,38 @@ $ < /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-64};echo;
 5PFhfL1Eoe8Wa6WUxpR4wcwKUqkcl3UUg9QeOmpfnGHpW2O9cOsZ5yIoCDgMMdVP
 ```
 
-Edited coturn configs:
+Copy and edit turnserver config like so:
 ```
-$ sudo nano /etc/turnserver.conf
+$ sudo cp /etc/turnserver.conf /etc/turnserver2.conf
+$ sudo nano /etc/turnserver2.conf
 
-lt-cred-mech
+# add this to the bottom:
+
+userdb=/var/db/turndb2
+pidfile="/var/run/turnserver2.pid"
 use-auth-secret
 static-auth-secret=shared-secret-key
 realm=turn.example.org
+listening-port=3478
 no-tcp-relay
 allowed-peer-ip=10.0.0.1
 user-quota=16
 total-quota=1200
 min-port=49152
 max-port=65535
+```
 
+Create new coturn server database:
+```
+$ sudo gzip -d /usr/share/doc/coturn/examples/var/db/turndb.gz
+$ sudo cp /usr/share/doc/coturn/examples/var/db/turndb /var/lib/turn/turndb2
+```
+
+Start and test the new coturn service:
+`$ sudo systemctl start coturn2`
+
+Edit coturn configs:
+```
 $ sudo nano /etc/default/coturn
 
 #
@@ -426,9 +476,10 @@ turn_shared_secret: shared-secret-key
 turn_user_lifetime: 86400000
 turn_allow_guests: true
 ```
+
 Restart both coturn and matrix-synapse and test:
 ```
-$ sudo systemctl start coturn
+$ sudo systemctl restart coturn2
 $ sudo systemctl restart matrix-synapse
 ```
 
@@ -446,6 +497,7 @@ $ wget -qO -  https://download.jitsi.org/jitsi-key.gpg.key | sudo apt-key add -
 $ sudo apt update
 $ sudo apt -y install jitsi-meet
 ```
+
 When prompted for hostname of the current installation for jisti-videobridge2:
 - enter 'jitsi.example.org'
 - Select 'I want to use my own certificate.'
@@ -453,9 +505,8 @@ When prompted for hostname of the current installation for jisti-videobridge2:
 - enter '/etc/letsencrypt/live/example.org/fullchain.pem'
 
 Edited jitsi nginx config like so:
-
 ```
-$ sudo nano /etc/nginx/sites-available/jitsi.testing355.com.conf
+$ sudo nano /etc/nginx/sites-available/jitsi.example.org.conf
 
 server_names_hash_bucket_size 64;
 
@@ -476,15 +527,20 @@ server {
     }
 }
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name jitsi.example.org;
 
+# Mozilla Guideline v5.4, nginx 1.17.7, OpenSSL 1.1.1d, intermediate configuration
     ssl_protocols TLSv1.3 TLSv1.2;
     ssl_prefer_server_ciphers on;
     ssl_ciphers "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256";
 
-    add_header Strict-Transport-Security "max-age=31536000";
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;  # about 40000 sessions
+    ssl_session_tickets off;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
 
     ssl_certificate /etc/letsencrypt/live/example.org/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/example.org/privkey.pem;
@@ -577,43 +633,6 @@ server {
 }
 ```
 
-Comment out the 443 section in /etc/nginx/modules-enabled/60-jitsi-meet.conf:
-
-```
-$ sudo nano /etc/nginx/modules-enabled/60-jitsi-meet.conf
- 
-# this is jitsi-meet nginx module configuration
-# this forward all http traffic to the nginx virtual host port
-# and the rest to the turn server
-
-stream {
-    upstream web {
-        server 127.0.0.1:4444;
-    }
-    upstream turn {
-        server 127.0.0.1:4445;
-    }
-    # since 1.13.10
-    map $ssl_preread_alpn_protocols $upstream {
-        ~\bh2\b         web;
-        ~\bhttp/1\.     web;
-        default         turn;
-    }
-
-#    server {
-#        listen 443;
-#        listen [::]:443;
-#
-#        # since 1.11.5
-#        ssl_preread on;
-#        proxy_pass $upstream;
-#
-#        # Increase buffer to serve video
-#        proxy_buffer_size 10m;
-#    }
-}
-```
-
 Uncomment the 'add_header Strict-Transport-Security..' line in /etc/nginx/conf.d/matrix.conf.
 
 `$ sudo nano /etc/nginx/conf.d/matrix.conf`
@@ -621,6 +640,8 @@ Uncomment the 'add_header Strict-Transport-Security..' line in /etc/nginx/conf.d
 Attempt to restart nginx and inspect jitsi.example.org:
 
 `$ sudo service nginx restart`
+
+Test if Jitsi is working at this new subdomain.
 
 ***
 ## Done!
