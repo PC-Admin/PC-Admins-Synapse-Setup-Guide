@@ -453,9 +453,6 @@ $ sudo gzip -d /usr/share/doc/coturn/examples/var/db/turndb.gz
 $ sudo cp /usr/share/doc/coturn/examples/var/db/turndb /var/lib/turn/turndb2
 ```
 
-Start and test the new coturn service:
-`$ sudo systemctl start coturn2`
-
 Edit coturn configs:
 ```
 $ sudo nano /etc/default/coturn
@@ -477,9 +474,9 @@ turn_user_lifetime: 86400000
 turn_allow_guests: true
 ```
 
-Restart both coturn and matrix-synapse and test:
+Restart both the new coturn service and matrix-synapse, then test cross-NAT calling:
 ```
-$ sudo systemctl restart coturn2
+$ sudo systemctl start coturn2
 $ sudo systemctl restart matrix-synapse
 ```
 
