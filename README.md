@@ -420,6 +420,23 @@ WantedBy=multi-user.target
 Reload service files:
 `$ sudo systemctl daemon-reload`
 
+Create new coturn server database:
+```
+$ sudo gzip -d /usr/share/doc/coturn/examples/var/db/turndb.gz
+$ sudo cp /usr/share/doc/coturn/examples/var/db/turndb /var/lib/turn/turndb2
+```
+
+Edit coturn configs:
+```
+$ sudo nano /etc/default/coturn
+
+#
+# Uncomment it if you want to have the turnserver running as
+# an automatic system service daemon
+#
+TURNSERVER_ENABLED=1
+```
+
 Generate a ‘shared-secret-key’, this can be done like so:
 ```
 $ < /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-64};echo;
@@ -445,23 +462,6 @@ user-quota=16
 total-quota=1200
 min-port=49152
 max-port=65535
-```
-
-Create new coturn server database:
-```
-$ sudo gzip -d /usr/share/doc/coturn/examples/var/db/turndb.gz
-$ sudo cp /usr/share/doc/coturn/examples/var/db/turndb /var/lib/turn/turndb2
-```
-
-Edit coturn configs:
-```
-$ sudo nano /etc/default/coturn
-
-#
-# Uncomment it if you want to have the turnserver running as
-# an automatic system service daemon
-#
-TURNSERVER_ENABLED=1
 ```
 
 Edit homeserver.yaml:
