@@ -386,9 +386,11 @@ Your matrix server still cannot make calls across NATs (different routers), for 
 Configure a simple A DNS record pointing turn.example.org to your servers IP.
 
 Install coturn:
+
 `$ sudo apt install coturn`
 
 Jitsi will hijack your default coturn service so lets create a secondary one:
+
 `$ sudo cp /lib/systemd/system/coturn.service /lib/systemd/system/coturn2.service`
 
 Edit the service file:
@@ -418,6 +420,7 @@ WantedBy=multi-user.target
 ```
 
 Reload service files:
+
 `$ sudo systemctl daemon-reload`
 
 Create new coturn server database:
