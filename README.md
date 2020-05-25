@@ -440,7 +440,7 @@ $ sudo nano /etc/default/coturn
 TURNSERVER_ENABLED=1
 ```
 
-Generate a ‘shared-secret-key’, this can be done like so:
+Generate a ‘shared-secret-key’ and record it, this can be done like so:
 ```
 $ < /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-64};echo;
 5PFhfL1Eoe8Wa6WUxpR4wcwKUqkcl3UUg9QeOmpfnGHpW2O9cOsZ5yIoCDgMMdVP
