@@ -14,7 +14,7 @@ This work is licensed under Creative Commons Attribution Share Alike 4.0, for mo
 ***
 ## Server Setup
 
-Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478, 4445/udp, 4446/udp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
+Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478/udp, 4445/udp, 4446/udp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
 ***
 ## DNS Records
 
@@ -448,27 +448,33 @@ Copy and edit turnserver config like so:
 $ sudo cp /etc/turnserver.conf /etc/turnserver2.conf
 $ sudo nano /etc/turnserver2.conf
 
-# add this to the bottom:
-
-userdb=/var/db/turndb2
+# Comment everything above out and add this to the bottom:
+userdb=/var/lib/turn/turndb2
 pidfile="/var/run/turnserver2.pid"
+listening-port=3478
+lt-cred-mech
+fingerprint
+stale-nonce
 use-auth-secret
 static-auth-secret=shared-secret-key
+server-name=turn.example.org
 realm=turn.example.org
-listening-port=3478
+no-stout-log
+syslog
+mobility
+#no-tlsv1
+#no-tlsv1_1
 no-tcp-relay
-allowed-peer-ip=10.0.0.1
-user-quota=16
+user-quota=12
 total-quota=1200
-min-port=49152
-max-port=65535
+no-loopback-peers
 ```
 
 Edit homeserver.yaml:
 ```
 $ sudo nano /etc/matrix-synapse/homeserver.yaml
 
-turn_uris: [ "turn:turn.example.org:3478?transport=udp", "turn:turn.example.org:3478?transport=tcp" ]
+turn_uris: [ "turn:turn.example.org:3478?transport=udp" ]
 turn_shared_secret: shared-secret-key
 turn_user_lifetime: 86400000
 turn_allow_guests: true
