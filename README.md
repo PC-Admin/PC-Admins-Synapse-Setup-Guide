@@ -465,8 +465,6 @@ realm=turn.example.org
 no-stout-log
 syslog
 mobility
-#no-tlsv1
-#no-tlsv1_1
 no-tcp-relay
 user-quota=12
 total-quota=1200
