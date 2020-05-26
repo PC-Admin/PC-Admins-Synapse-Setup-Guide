@@ -14,7 +14,7 @@ This work is licensed under Creative Commons Attribution Share Alike 4.0, for mo
 ***
 ## Server Setup
 
-Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478/udp, 4445/udp, 4446/udp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
+Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478/udp, 5349/udp, 50001-60000/udp, 4445/udp, 4446/udp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
 ***
 ## DNS Records
 
@@ -110,7 +110,7 @@ database:
 
 Test if server IP can be pinged first, if it can then run:
 
-`$ sudo certbot certonly --rsa-key-size 4096 -d example.org -d jitsi.example.org`
+`$ sudo certbot certonly --rsa-key-size 4096 -d example.org -d jitsi.example.org -d turn.example.org`
 
 Choose ‘spin up a temporary webserver’
 
@@ -450,11 +450,12 @@ Copy and edit turnserver config like so:
 ```
 $ sudo cp /etc/turnserver.conf /etc/turnserver2.conf
 $ sudo nano /etc/turnserver2.conf
-
+```
+Add:
+```
 # Comment everything above out and add this to the bottom:
-userdb=/var/lib/turn/turndb2
-pidfile="/var/run/turnserver2.pid"
 listening-port=3478
+tls-listening-port=5349
 lt-cred-mech
 fingerprint
 stale-nonce
@@ -462,22 +463,31 @@ use-auth-secret
 static-auth-secret=shared-secret-key
 server-name=turn.example.org
 realm=turn.example.org
+cert=/etc/letsencrypt/live/example.org/fullchain.pem
+pkey=/etc/letsencrypt/live/example.org/privkey.pem
 no-stout-log
 syslog
 mobility
+no-tlsv1
+no-tlsv1_1
 no-tcp-relay
+#allowed-peer-ip=10.0.0.1
 user-quota=12
 total-quota=1200
 no-loopback-peers
+no-multicast-peers
+no-tcp
+min-port=55001
+max-port=60000
 ```
 
 Edit homeserver.yaml:
 ```
 $ sudo nano /etc/matrix-synapse/homeserver.yaml
 
-turn_uris: [ "turn:turn.example.org:3478?transport=udp" ]
+turn_uris: [ "turn:turn.example.org:3478?transport=udp", "turn:turn.example.org:5349?transport=udp" ]
 turn_shared_secret: shared-secret-key
-turn_user_lifetime: 86400000
+turn_user_lifetime: 1h
 turn_allow_guests: true
 ```
 
@@ -635,6 +645,17 @@ server {
         rewrite ^/(.*)$ /xmpp-websocket;
     }
 }
+```
+
+Edit the coturn config for Jitsi:
+```
+$ sudo nano /etc/turnserver.conf
+```
+Add to the end:
+```
+#Insert below existing configuration
+min-port=50001
+max-port=55000
 ```
 
 Uncomment the 'add_header Strict-Transport-Security..' line in /etc/nginx/conf.d/matrix.conf.
