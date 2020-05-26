@@ -243,9 +243,9 @@ The first is used to do the configuration of synapse, the second is used to setu
   We won't have a TLS listener, so we can remove this too.
 
     File: /etc/matrix-synapse/homeserver.yaml: 
-```yaml
-#    tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"
-#    tls_private_key_path: "/etc/matrix-synapse/privkey.pem"
+```
+    #tls_certificate_path: "/etc/matrix-synapse/fullchain.pem"
+    #tls_private_key_path: "/etc/matrix-synapse/privkey.pem"
 ```
 
 - Federation Blacklist (optional):
