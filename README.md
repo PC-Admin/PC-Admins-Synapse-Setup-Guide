@@ -23,7 +23,7 @@ Additionally you might setup a DNS SRV record, though it's only necessary, when 
 
 Example DNS SRV record:
 ```
-_matrix._tcp        3600 IN SRV     10 0 8448 example.org
+_matrix._tcp        3600 IN SRV     10 0 8448 example.org.
 ```
 
 ***
