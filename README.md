@@ -176,7 +176,7 @@ server {
     ssl_dhparam         /etc/letsencrypt/live/example.org/dhparam4096.pem;
     ssl_ecdh_curve      X25519:secp521r1:secp384r1:prime256v1;
 
-    #add_header Strict-Transport-Security "max-age=31536000; includeSubdomains" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubdomains" always;
     add_header X-Content-Type-Options "nosniff" always;
 
     location /_matrix {
@@ -519,135 +519,6 @@ When prompted for hostname of the current installation for jisti-videobridge2:
 - enter '/etc/letsencrypt/live/example.org/privkey.pem'
 - enter '/etc/letsencrypt/live/example.org/fullchain.pem'
 
-Edited jitsi nginx config like so:
-```
-$ sudo nano /etc/nginx/sites-available/jitsi.example.org.conf
-
-server_names_hash_bucket_size 64;
-
-server {
-    listen 80;
-    listen [::]:80;
-    server_name jitsi.example.org;
-
-    location ^~ /.well-known/acme-challenge/ {
-       default_type "text/plain";
-       root         /usr/share/jitsi-meet;
-    }
-    location = /.well-known/acme-challenge/ {
-       return 404;
-    }
-    location / {
-       return 301 https://$host$request_uri;
-    }
-}
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    server_name jitsi.example.org;
-
-# Mozilla Guideline v5.4, nginx 1.17.7, OpenSSL 1.1.1d, intermediate configuration
-    ssl_protocols TLSv1.3 TLSv1.2;
-    ssl_prefer_server_ciphers on;
-    ssl_ciphers "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-AES-128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256";
-
-    ssl_session_timeout 1d;
-    ssl_session_cache shared:SSL:10m;  # about 40000 sessions
-    ssl_session_tickets off;
-
-    add_header Strict-Transport-Security "max-age=31536000" always;
-
-    ssl_certificate /etc/letsencrypt/live/example.org/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/example.org/privkey.pem;
-
-    root /usr/share/jitsi-meet;
-
-    # ssi on with javascript for multidomain variables in config.js
-    ssi on;
-    ssi_types application/x-javascript application/javascript;
-
-    index index.html index.htm;
-    error_page 404 /static/404.html;
-
-    gzip on;
-    gzip_types text/plain text/css application/javascript application/json;
-    gzip_vary on;
-
-    location = /config.js {
-        alias /etc/jitsi/meet/jitsi.example.org-config.js;
-    }
-
-    location = /external_api.js {
-        alias /usr/share/jitsi-meet/libs/external_api.min.js;
-    }
-
-    #ensure all static content can always be found first
-    location ~ ^/(libs|css|static|images|fonts|lang|sounds|connection_optimization|.well-known)/(.*)$
-    {
-        add_header 'Access-Control-Allow-Origin' '*';
-        alias /usr/share/jitsi-meet/$1/$2;
-    }
-
-    # BOSH
-    location = /http-bind {
-        proxy_pass      http://localhost:5280/http-bind;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_set_header Host $http_host;
-    }
-
-    # xmpp websockets
-    location = /xmpp-websocket {
-        proxy_pass http://127.0.0.1:5280/xmpp-websocket?prefix=$prefix&$args;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $http_host;
-        tcp_nodelay on;
-    }
-
-    location ~ ^/([^/?&:'"]+)$ {
-        try_files $uri @root_path;
-    }
-
-    location @root_path {
-        rewrite ^/(.*)$ / break;
-    }
-
-    location ~ ^/([^/?&:'"]+)/config.js$
-    {
-       set $subdomain "$1.";
-       set $subdir "$1/";
-
-       alias /etc/jitsi/meet/jitsi.example.org-config.js;
-    }
-
-    #Anything that didn't match above, and isn't a real file, assume it's a room name and redirect to /
-    location ~ ^/([^/?&:'"]+)/(.*)$ {
-        set $subdomain "$1.";
-        set $subdir "$1/";
-        rewrite ^/([^/?&:'"]+)/(.*)$ /$2;
-    }
-
-    # BOSH for subdomains
-    location ~ ^/([^/?&:'"]+)/http-bind {
-        set $subdomain "$1.";
-        set $subdir "$1/";
-        set $prefix "$1";
-
-        rewrite ^/(.*)$ /http-bind;
-    }
-
-    # websockets for subdomains
-    location ~ ^/([^/?&:'"]+)/xmpp-websocket {
-        set $subdomain "$1.";
-        set $subdir "$1/";
-        set $prefix "$1";
-
-        rewrite ^/(.*)$ /xmpp-websocket;
-    }
-}
-```
-
 Edit the coturn config for Jitsi:
 ```
 $ sudo nano /etc/turnserver.conf
@@ -659,11 +530,7 @@ min-port=50001
 max-port=55000
 ```
 
-Uncomment the 'add_header Strict-Transport-Security..' line in /etc/nginx/conf.d/matrix.conf.
-
-`$ sudo nano /etc/nginx/conf.d/matrix.conf`
-
-Attempt to restart nginx and inspect jitsi.example.org:
+Attempt to restart nginx:
 
 `$ sudo service nginx restart`
 
