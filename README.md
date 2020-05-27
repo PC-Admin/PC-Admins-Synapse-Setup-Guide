@@ -495,6 +495,7 @@ Restart both the new coturn service and matrix-synapse, then test cross-NAT call
 ```
 $ sudo systemctl start coturn2
 $ sudo systemctl restart matrix-synapse
+$ sudo systemctl enable coturn2
 ```
 
 ***
