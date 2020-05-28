@@ -251,12 +251,7 @@ The first is used to do the configuration of synapse, the second is used to setu
 
 - Set web_client_location:
 
-    File: /etc/matrix-synapse/homeserver.yaml
-
-    Edit so:
-```
-web_client_location: https://chat.example.org/
-```
+    File: /etc/matrix-synapse/homeserver.yaml: `web_client_location: https://chat.example.org/`
 
 - Set minimum version for federation TLS:
 
