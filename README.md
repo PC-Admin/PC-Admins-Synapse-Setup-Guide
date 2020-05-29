@@ -1,5 +1,5 @@
 
-# PC-Admin's Synapse Setup Guide
+# PC-Admins Synapse Setup Guide
 
 
 This guide covers complete Synapse setup for Debian 10 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. As well as additional steps to configure a jitsi instance for conferencing. 
