@@ -617,3 +617,5 @@ Test if Jitsi is working at this new subdomain.
 Your Synapse is now up and running and your hosting the latest Riot through the Nginx web server. You're also running a jitsi-meet instance.
 
 You should familiarise yourself with the Synapse wiki: https://github.com/matrix-org/synapse/wiki
+
+Find extra steps to configure your Synapse server here: https://github.com/PC-Admin/PC-Admins-Synapse-Extras
