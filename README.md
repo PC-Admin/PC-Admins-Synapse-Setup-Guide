@@ -179,7 +179,7 @@ server {
 
 server {
     listen 443 ssl http2;
-    listen 8448 ssl http2;  # for federation (skip if pointing SRV or .well-known to port 443)
+    listen 8448 ssl http2;  # for federation (skip if pointing SRV to port 443)
     gzip off;
     server_name example.org;
 
@@ -204,9 +204,9 @@ server {
         proxy_set_header X-Forwarded-For $remote_addr;
     }
 
-    # This can be skipped if you're using port 8448 on example.org for federation:
     location /.well-known/matrix/server {
         return 200 '{ "m.server": "example.org:8448" }';
+        add_header access-control-allow-origin *;
         add_header content-type application/json;
     }
 
@@ -528,7 +528,7 @@ $ sudo nano /etc/turnserver2.conf
 ```
 Add:
 ```
-# Comment everything above out and add this to the bottom:
+# Append this to the bottom of the new turnserver config:
 listening-port=3478
 tls-listening-port=5349
 lt-cred-mech
@@ -541,7 +541,6 @@ realm=turn.example.org
 cert=/etc/letsencrypt/live/example.org/fullchain.pem
 pkey=/etc/letsencrypt/live/example.org/privkey.pem
 no-stout-log
-syslog
 mobility
 no-tlsv1
 no-tlsv1_1
