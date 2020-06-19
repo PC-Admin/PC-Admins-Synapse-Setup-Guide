@@ -528,7 +528,7 @@ $ sudo nano /etc/turnserver2.conf
 ```
 Add:
 ```
-# Comment everything above out and add this to the bottom:
+# Append this to the bottom of the new turnserver config:
 listening-port=3478
 tls-listening-port=5349
 lt-cred-mech
@@ -541,7 +541,6 @@ realm=turn.example.org
 cert=/etc/letsencrypt/live/example.org/fullchain.pem
 pkey=/etc/letsencrypt/live/example.org/privkey.pem
 no-stout-log
-syslog
 mobility
 no-tlsv1
 no-tlsv1_1
