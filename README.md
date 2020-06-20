@@ -498,11 +498,13 @@ Reload service files:
 
 `$ sudo systemctl daemon-reload`
 
+Stop original coturn service:
+
+`$ sudo systemctl stop coturn`
+
 Create new coturn server database:
-```
-$ sudo gzip -d /usr/share/doc/coturn/examples/var/db/turndb.gz
-$ sudo cp /usr/share/doc/coturn/examples/var/db/turndb /var/lib/turn/turndb2
-```
+
+`$ sudo cp /var/lib/turn/turndb /var/lib/turn/turndb2`
 
 Edit coturn configs:
 ```
@@ -540,6 +542,7 @@ server-name=turn.example.org
 realm=turn.example.org
 cert=/etc/letsencrypt/live/example.org/fullchain.pem
 pkey=/etc/letsencrypt/live/example.org/privkey.pem
+userdb=/var/lib/turn/turndb2
 no-stout-log
 mobility
 no-tlsv1
@@ -567,6 +570,7 @@ turn_allow_guests: true
 
 Restart both the new coturn service and matrix-synapse, then test cross-NAT calling:
 ```
+$ sudo systemctl start coturn
 $ sudo systemctl start coturn2
 $ sudo systemctl restart matrix-synapse
 $ sudo systemctl enable coturn2
