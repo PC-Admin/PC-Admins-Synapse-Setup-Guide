@@ -517,17 +517,65 @@ $ sudo nano /etc/default/coturn
 TURNSERVER_ENABLED=1
 ```
 
+Create certs that turnserver user can access:
+```
+mkdir -p /etc/coturn/certs
+chown -R turnserver:turnserver /etc/coturn/
+chmod -R 700 /etc/coturn/
+nano /etc/letsencrypt/renewal-hooks/deploy/coturn-certbot-deploy.sh
+chmod 700 /etc/letsencrypt/renewal-hooks/deploy/coturn-certbot-deploy.sh
+```
+
+In the renewal hook insert:
+```
+#!/bin/sh
+
+set -e
+
+for domain in $RENEWED_DOMAINS; do
+        case $domain in
+        example.org)
+                daemon_cert_root=/etc/coturn/certs
+
+                # Make sure the certificate and private key files are
+                # never world readable, even just for an instant while
+                # we're copying them into daemon_cert_root.
+                umask 077
+
+                cp "$RENEWED_LINEAGE/fullchain.pem" "$daemon_cert_root/$domain.cert"
+                cp "$RENEWED_LINEAGE/privkey.pem" "$daemon_cert_root/$domain.key"
+
+                # Apply the proper file ownership and permissions for
+                # the daemon to read its certificate and key.
+                chown turnserver "$daemon_cert_root/$domain.cert" \
+                        "$daemon_cert_root/$domain.key"
+                chmod 400 "$daemon_cert_root/$domain.cert" \
+                        "$daemon_cert_root/$domain.key"
+
+                service coturn2 restart >/dev/null
+                ;;
+        esac
+done
+```
+
+Renew certbot:
+`$ sudo certbot renew --force-renewal`
+
 Generate a ‘shared-secret-key’ and record it, this can be done like so:
 ```
 $ < /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-64};echo;
 5PFhfL1Eoe8Wa6WUxpR4wcwKUqkcl3UUg9QeOmpfnGHpW2O9cOsZ5yIoCDgMMdVP
 ```
 
+Generate an example-password and record it, then generate a ’hash’ from it using turnadmin:
+` turnadmin -P -p "example-password" `
+
 Copy and edit turnserver config like so:
 ```
 $ sudo cp /etc/turnserver.conf /etc/turnserver2.conf
 $ sudo nano /etc/turnserver2.conf
 ```
+
 Add:
 ```
 # Append this to the bottom of the new turnserver config:
@@ -538,12 +586,17 @@ fingerprint
 stale-nonce
 use-auth-secret
 static-auth-secret=shared-secret-key
+cli-password=hash
 server-name=turn.example.org
 realm=turn.example.org
-cert=/etc/letsencrypt/live/example.org/fullchain.pem
-pkey=/etc/letsencrypt/live/example.org/privkey.pem
+cert=/etc/coturn/certs/example.org.cert
+pkey=/etc/coturn/certs/example.org.key
+dh2066
 userdb=/var/lib/turn/turndb2
-no-stout-log
+#no-stdout-log
+log-file=/var/tmp/turn2.log
+#syslog
+simple-log
 mobility
 no-tlsv1
 no-tlsv1_1
@@ -551,7 +604,6 @@ no-tcp-relay
 #allowed-peer-ip=10.0.0.1
 user-quota=12
 total-quota=1200
-no-loopback-peers
 no-multicast-peers
 no-tcp
 min-port=55001
