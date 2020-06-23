@@ -2,13 +2,13 @@
 # PC-Admins Synapse Setup Guide
 
 
-This guide covers complete Synapse setup for Debian 10 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse. As well as additional steps to configure a jitsi instance for conferencing. 
+This guide covers complete Synapse setup for Debian 10 with Postgresql. It includes the often missing sections on how to configure postgresql and coturn with Synapse.
 
 You can use this guide to make an encrypted chat server on its own domain.
 
 You will need at least a 1GB VPS although I recommend 2GB for a small server. You will need a desired domain name. This guide will setup a Matrix service at ‘example.org’ with Riot-Web hosted through NGINX on the same server at ‘chat.example.org‘.
 
-For a guide on how to make a Matrix/Riot/Jitsi service alongside your existing website please see: https://github.com/PC-Admin/PC-Admins-Synapse-Setup-Guide-2
+For a guide on how to make a Matrix/Riot/Coturn service alongside your existing website please see: https://github.com/PC-Admin/PC-Admins-Synapse-Setup-Guide-2
 
 Join the discussion at: #synapsesetupguide:matrix.org if you get stuck or have an edit in mind.
 ***
@@ -18,7 +18,7 @@ This work is licensed under Creative Commons Attribution Share Alike 4.0, for mo
 ***
 ## Server Setup
 
-Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478/udp, 5349/udp, 50001-60000/udp, 4445/udp, 4446/udp and 10000/udp will need to be open for the web service, synapse federation, coturn service and jitsi service.
+Configure a Debian 10 server with auto-updates, security and SSH access. Ports 80/tcp, 443/tcp, 8448/tcp, 3478/udp, 5349/udp, 50001-50100/udp will need to be open for the web service, synapse federation and a coturn service.
 ***
 ## DNS Records
 
@@ -112,7 +112,7 @@ database:
 
 Test if server IP can be pinged first, if it can then run:
 
-`$ sudo certbot certonly --rsa-key-size 4096 -d example.org -d chat.example.org -d jitsi.example.org -d turn.example.org`
+`$ sudo certbot certonly --rsa-key-size 4096 -d example.org -d chat.example.org -d turn.example.org`
 
 Choose ‘spin up a temporary webserver’
 
@@ -124,7 +124,6 @@ enter ‘example.org’ as the domain
 Performing the following challenges:
 http-01 challenge for example.org
 http-01 challenge for chat.example.org
-http-01 challenge for jitsi.example.org
 http-01 challenge for turn.example.org
 Waiting for verification...
 Cleaning up challenges
@@ -211,7 +210,7 @@ server {
     }
 
     location /.well-known/matrix/client {
-        return 200 '{ "m.homeserver": { "base_url": "https://example.org" }, "im.vector.riot.jitsi": { "preferredDomain": "jitsi.example.org" } }';
+        return 200 '{ "m.homeserver": { "base_url": "https://example.org" }, "im.vector.riot.jitsi": { "preferredDomain": "jitsi.riot.im" } }';
         add_header access-control-allow-origin *;
         add_header content-type application/json;
     }
@@ -442,7 +441,7 @@ Add:
         "breadcrumbs": true
     },
     "jitsi": {
-        "preferredDomain": "jitsi.example.org"
+        "preferredDomain": "jitsi.riot.im"
     }
 }
 ```
@@ -463,48 +462,6 @@ Configure a simple A DNS record pointing turn.example.org to your servers IP.
 Install coturn:
 
 `$ sudo apt install coturn`
-
-Jitsi will hijack your default coturn service so lets create a secondary one:
-
-`$ sudo cp /lib/systemd/system/coturn.service /lib/systemd/system/coturn2.service`
-
-Edit the service file:
-```
-$ sudo nano /lib/systemd/system/coturn2.service
-
-[Unit]
-Description=coTURN STUN/TURN Server 2
-Documentation=man:coturn(1) man:turnadmin(1) man:turnserver(1)
-After=network.target
-
-[Service]
-User=turnserver
-Group=turnserver
-Type=forking
-RuntimeDirectory=turnserver
-PIDFile=/run/turnserver/turnserver2.pid
-ExecStart=/usr/bin/turnserver --daemon -c /etc/turnserver2.conf --pidfile /run/turnserver/turnserver2.pid
-#FixMe: turnserver exit faster than it is finshing the setup and ready for handling the connection.
-ExecStartPost=/bin/sleep 2
-Restart=on-failure
-InaccessibleDirectories=/home
-PrivateTmp=yes
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Reload service files:
-
-`$ sudo systemctl daemon-reload`
-
-Stop original coturn service:
-
-`$ sudo systemctl stop coturn`
-
-Create new coturn server database:
-
-`$ sudo cp /var/lib/turn/turndb /var/lib/turn/turndb2`
 
 Edit coturn configs:
 ```
@@ -574,10 +531,9 @@ $ turnadmin -P -p "your-cli-password"
 $5$6fc2691fa3d289f9$8a7079825a7d4bfce772ed278c4d1549936b96b27ab1b3014a090492437feb45
 ```
 
-Copy and edit turnserver config like so:
+Edit turnserver config like so:
 ```
-$ sudo cp /etc/turnserver.conf /etc/turnserver2.conf
-$ sudo nano /etc/turnserver2.conf
+$ sudo nano /etc/turnserver.conf
 ```
 
 Add:
@@ -596,9 +552,9 @@ realm=turn.example.org
 cert=/etc/coturn/certs/example.org.cert
 pkey=/etc/coturn/certs/example.org.key
 dh2066
-userdb=/var/lib/turn/turndb2
+userdb=/var/lib/turn/turndb
 #no-stdout-log
-log-file=/var/tmp/turn2.log
+log-file=/var/tmp/turn.log
 #syslog
 simple-log
 mobility
@@ -611,7 +567,7 @@ total-quota=1200
 no-multicast-peers
 no-tcp
 min-port=55001
-max-port=60000
+max-port=50100
 ```
 
 Edit homeserver.yaml:
@@ -627,45 +583,8 @@ turn_allow_guests: true
 Restart both the new coturn service and matrix-synapse, then test cross-NAT calling:
 ```
 $ sudo systemctl start coturn
-$ sudo systemctl start coturn2
 $ sudo systemctl restart matrix-synapse
-$ sudo systemctl enable coturn2
 ```
-
-***
-## Jitsi Setup
-
-Jitsi is the usual conferencing software used with Matrix instances, hosting your own might give you reduced latency.
-
-Configure a simple A DNS record pointing jitsi.example.org to your servers IP.
-
-Install jitsi with debconf:
-```
-$ echo "deb https://download.jitsi.org unstable/" | sudo tee /etc/apt/sources.list.d/jitsi-unstable.list
-$ wget -qO -  https://download.jitsi.org/jitsi-key.gpg.key | sudo apt-key add -
-$ sudo apt update
-$ sudo apt install debconf-utils
-$ echo "jitsi-videobridge jitsi-videobridge/jvb-hostname string jitsi.example.org" | sudo debconf-set-selections
-$ echo "jitsi-meet-web-config jitsi-meet/cert-choice select 'Generate a new self-signed certificate (You will later get a chance to obtain a Let's encrypt certificate)'" | sudo debconf-set-selections
-$ sudo apt-get --option=Dpkg::Options::=--force-confold --option=Dpkg::options::=--force-unsafe-io --assume-yes --quiet install jitsi-meet
-```
-
-Edit the coturn config for Jitsi:
-```
-$ sudo nano /etc/turnserver.conf
-```
-Add to the end:
-```
-#Insert below existing configuration
-min-port=50001
-max-port=55000
-```
-
-Attempt to restart nginx:
-
-`$ sudo service nginx restart`
-
-Test if Jitsi is working at this new subdomain.
 
 ***
 ## Done!
